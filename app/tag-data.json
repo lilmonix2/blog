@@ -1,9 +1,12 @@
 {
-  "http": 1,
-  "network": 1,
-  "javascript": 1,
+  "http": 3,
+  "network": 4,
+  "typescript": 3,
   "c-language": 1,
-  "holiday": 1,
-  "canada": 1,
-  "images": 1
+  "linux": 2,
+  "操作系统": 1,
+  "javascript": 1,
+  "regex": 1,
+  "react": 1,
+  "vue": 1
 }
