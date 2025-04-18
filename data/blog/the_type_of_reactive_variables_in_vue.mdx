@@ -1,0 +1,169 @@
+---
+title: Vue 中响应式变量的类型
+date: '2024-11-24'
+tags: ['Vue', 'TypeScript']
+draft: false
+summary: '在使用 Vue 中的响应式系统时，通过 `reactive()` 函数转换的响应式变量得到的 TypeScript 类型推断，可能与原始的 TypeScript 类型不相同。'
+---
+
+> 在前端框架 Vue 中，我们经常定义一个响应式变量，来实现当数据更新时自动更新 view 视图的效果。对于我们定义的“响应式”变量，实际上是通过 `Object.defineProperty()` 或者是 `Proxy()` 等数据劫持的方式监听了数据的变动，从而实现了响应式更新视图的效果。
+
+## 简述 ~~TR;DR~~
+
+在使用 Vue 中的响应式系统时，通过 `reactive()` 函数转换的响应式变量得到的 TypeScript 类型推断，可能与原始的 TypeScript 类型不相同。
+
+## 背景
+
+对于不熟悉 Vue 框架的读者：在 Vue 项目的开发中，如果使用了 TypeScript，那么当我们定义响应式变量的时候，可以这样同时声明变量的初始值与类型：
+
+```typescript
+const count = ref<number>(0)
+count.value = '1' // error: Type 'string' is not assignable to type 'number'.
+```
+
+## 响应式变量的属性问题
+
+最近在开发一个使用 Vue + TypeScript 技术栈的项目，使用面向对象的开发方式的时候，遇到了一个奇怪的类型问题。如下是简化的代码：
+
+```typescript
+class Car {
+  public name: string
+  private owner: string
+
+  constructor(name: string, owner: string) {
+    this.name = name
+    this.owner = owner
+  }
+}
+
+function getCarName(car: Car) {
+  return car.name
+}
+
+const su7 = new Car('xiaomi_su7', 'Mr.Lei')
+getCarName(su7)
+```
+
+如上声明了一个 `Car` 的类，并实例化了 `su7` 这个对象，到目前为止，代码运行正常。
+
+但是当我们将 `su7` 这个变量变为响应式的时候，会发现响应式的变量不再能传入 `getCarName` 方法：
+
+```typescript
+import { reactive } from 'vue'
+
+// ...
+
+const reactiveSU7 = reactive(su7)
+getCarName(reactiveSU7)
+// 				 ^^^^^^^^^^^
+// Argument of type '{ name: string; }' is not assignable to parameter of type 'Car'.
+//   Property 'owner' is missing in type '{ name: string; }' but required in type 'Car'.
+```
+
+当我们将鼠标移动到分别移动到 `su7` 与 `reactiveSU7` 上面的时候，会发现 `TypeScript` 对于这两个变量的类型提示并不相同。
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_1.png)
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_2.png)
+
+我们发现，`su7` 在变为响应式变量 `reactiveSU7` 的时候，私有属性 `owner` 消失了。当我们把 `owner` 的声明由 `private` 改为 `public` 时，变量的属性在 `reactiveSU7` 上便可以被访问到了。
+
+上述现象有些反直觉，我们不禁发问：`owner` 属性真的在转换为响应式变量的过程中丢失了吗？我们来打印一下：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_10.png)
+
+可以看到，两个变量都成功打印了。那么看来是 TypeScript 的变量类型推断错误。
+
+既然知道了是变量推断错误，那么解决上述问题的方式就非常简单了，我们直接对 `reactiveSU7` 进行断言：
+
+```ts
+const reactiveSU7 = reactive<Car>(su7) as Car
+getCarName(reactiveSU7)
+```
+
+类型检查通过！
+
+注意，为了类型安全，此时需要加上泛型保证传入 reactive 函数的参数类型。
+
+## reactive 的实现
+
+点击进入 ` reactive`，我们会发现它会返回一个 `Reactive` 的泛型
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_3.png)
+
+我们继续点击 `Reactive` ，查看定义：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_4.png)
+
+由于我们传入的不是数组，所以是对 `UnwrapNestedRefs<T>` 和任意非空元素 `{}` 取了并集，继续点击 `UnwrapNestedRefs<T>` 查看：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_7.png)
+
+`UnwrapNestedRefs<T>` 判断了传入参数是否是一个 `Ref` (Vue 中针对原始类型实现响应式的方法)，由于我们传入的是一个原始对象而不是 `Ref`，所以会走到 `UnwrapRefSimple<T>` 这里：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_8.png)
+
+可以看到 `UnwrapRefSimple<T>` 的定义很长，让人感到有些泄气，但是别担心，它们都是针对类型进行了一系列复杂的类型三目运算，它陆续判断了 `Map<K, V>`、`WeakMap<K, V>`、`Set<V>`、`WeakSet<V>` 等，最后到了判断对象环节 `T extends object` 也就是我们上面 demo 所描述的 case：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_5.png)
+
+这里使用 `[P in keyof T]` 重新遍历提取了 `T` 中的属性，由于 TypeScript 的类型属性遍历是不遍历私有属性的，在这里我们上文举例的私有属性 `owner` 被过滤掉了，缺失的私有属性 `owner` 导致 `reactiveSU7` 的类型不等同于 `Car` 构造出的类型。
+
+为了证明这一点，我们将这个属性遍历删除，而是直接返回 `T` ：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_6.png)
+
+~~岁月静好，无事发生~~
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_9.png)
+
+## 探索 reactive 遍历属性的原因
+
+众所周知，当我们发现源码有问题的时候，一定是我们自己的问题。Vue 的作者尤大在写代码的时候难道考虑不到这个么？
+
+让我们再仔细看下它在这个遍历里面到底做了些什么：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_5.png)
+
+它先判断了这个对象的 Key 是不是一个 `symbol` 类型，如果是 `symbol` 类型，就直接根据 Key 取值的类型，否则则会进入到 `UnwrapRef<T[P]>` 的逻辑中，我们再看 `UnwrapRef<T[P]>`：
+
+![](/static/images/the_type_of_reactive_variables_in_vue/img_7.png)
+
+由于转换成的响应式变量并不是原始值，因此里面也是根据三目运算符判断是否存在 `Ref` 嵌套，来分别解构，取出被 `Ref` 劫持属性的原始类型。
+
+## 不相关的闲谈：
+
+有细心的读者可能会发现，在 `Reactive` 里面取并集的是 `{}`，而 `UnwrapNestedRefs<T>` 中三目运算符判断的则是 `T extends object`。
+
+在 TypeScript 中，`{}` 的定义比较宽松，表示任何非空(`undefined`、`null`)，并允许基本类型如 `number`、`string` 等：
+
+```ts
+let a1: {} = 42 // 合法
+let b1: {} = 'hello' // 合法
+let c1: {} = [] // 合法
+let d1: {} = {} // 合法
+```
+
+而 `object` 表示严格对象类型，并且不允许基本类型。
+
+```ts
+let a2: object = 42 // 非法
+let b2: object = 'hello' // 非法
+let c2: object = [] // 合法
+let d2: object = {} // 合法
+let e2: object = function () {} // 合法
+```
+
+## 尾声
+
+综上，由于 Vue 在转换响应式变量时，需要做一些额外的类型处理，导致 TypeScript 的类型推断与使用类构造出的原始类型不相同。
+
+### For Further Reading:
+
+对于响应式的转换，Vue 的文档关于 `reactive()` 的部分中也有相应的说明。
+
+[https://vuejs.org/api/reactivity-core.html#reactive](https://vuejs.org/api/reactivity-core.html#reactive)
+
+如果你对此足够感兴趣，也可以再看看：
+
+[https://github.com/vuejs/core/blob/main/packages/reactivity/src/reactive.ts](https://github.com/vuejs/core/blob/main/packages/reactivity/src/reactive.ts)

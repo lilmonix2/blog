@@ -1,0 +1,109 @@
+---
+title: 异步输出 16 进制数字
+date: '2023-08-25'
+lastmod: '2025-04-18'
+tags: ['JavaScript']
+draft: false
+summary: '在网上冲浪时看见了一个问题，题目要求调用一个异步 API，输出 16 进制的数字。个人比较感兴趣，所以尝试写了一下。'
+---
+
+在网上冲浪时看见了一个问题，比较感兴趣，所以自己尝试写了一下。
+这个是 [原题目网址](https://coolshell.cn/t.html) 与对应的 [API](https://coolshell.cn/t.js)
+
+## 分析
+
+​题目的要求通过调用 `xss_rpc_call` 的方式输出异步请求的 16 进制结果。
+
+API 调用样例：
+
+```javascript
+xss_rpc_call(1, function (res) {
+  console.log(1, res)
+})
+// 0x1
+```
+
+（2025-04-18 更新）由于原 API 已经无法调用，现对 `xss_rpc_call` API 进行 mock
+
+```javascript
+function xss_rpc_call(num, callback) {
+  const DelayMaxMs = 6000
+  const randomDelay = Math.floor(Math.random() * DelayMaxMs) // 生成随机延迟
+  const hexadecimalNumber = num.toString(16)
+
+  // 使用 setTimeout 实现随机延迟调用
+  setTimeout(function () {
+    callback && callback(hexadecimalNumber)
+  }, randomDelay)
+}
+```
+
+## 递归解
+
+最简单的肯定是递归解法：
+
+```javascript
+function recursiveFunc(i) {
+  // 递归边界条件
+  if (i > 31) {
+    return
+  }
+  // 递归
+  xss_rpc_call(i, function (res) {
+    recursiveFunc(i + 1)
+    console.log(i, res)
+  })
+}
+```
+
+## 尽快输出
+
+但是肯定不是我们理想的解法，考虑到 API 返回的数据有一个随机延迟，所以保证输出顺序的同时，应当尽快输出：
+
+```javascript
+// 初始化输出队列与输出函数
+const sequence = new Array(31).fill(null)
+const performOutput = initOutput()
+
+function asapOutput() {
+  // 循环调用 API，将结果存入输出队列
+  for (let i = 0; i < sequence.length; i++) {
+    xss_rpc_call(i, function (res) {
+      sequence[i] = res
+      performOutput(i)
+    })
+  }
+  console.log(sequence)
+}
+function initOutput() {
+  let nextOutputIndex = 0 // 下一个应该输出值的索引
+  return function (currentIndex) {
+    // 当前调用输出函数的元素索引大于下一个输出值的索引，不应输出，early return
+    if (currentIndex > nextOutputIndex) {
+      return
+    }
+    // 从下一个该输出的结果开始顺序输出
+    for (let j = currentIndex; j < sequence.length; j++) {
+      const element = sequence[j]
+      // 如果为 null 说明当前请求还没返回 16 进制数字，则更新下一个该输出的元素索引并结束函数调用
+      if (element === null) {
+        nextOutputIndex = j
+        return
+      } else {
+        console.log(j, element)
+      }
+    }
+  }
+}
+asapOutput()
+```
+
+## 输出效果
+
+写了个 Demo 来演示一下输出效果：
+
+<AsapOutputDemo />
+
+## 后记
+
+心血来潮写好后，在网上一搜，发现 Vue 的作者尤雨溪当年也曾写过这个。感兴趣的伙伴也可以 [在这里康康](https://gist.github.com/yyx990803/5096628)。

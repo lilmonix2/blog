@@ -1,0 +1,286 @@
+---
+title: 正则表达式
+date: '2023-10-30'
+tags: ['regex']
+draft: false
+summary: '总结一下正则的常见用法，并且学习一下正则引擎是如何工作的。'
+---
+
+正则表达式，即 `Regular Expression`，是一种文本匹配规则的表达方式。
+[PCRE](https://www.pcre.org/) 即是一个著名的正则表达式库，使用 C 语言编写。JavaScript 的正则处理就是基于 PCRE 的。
+
+总结一下正则的常见用法，并且学习一下正则引擎是如何工作的。
+
+## 常见用法
+
+### 模糊匹配
+
+1. 匹配长度不固定
+
+`/ab{1,3}c/` ：匹配以 `a` 为第一个字符，并且中间有 1 到 3 个不等的字符 `b` ，最后匹配字符 `c`
+
+2. 匹配字符不固定
+
+`user\d` ：匹配 `user` 后面跟着一个任意的数字的文本。
+
+### 惰性匹配与贪婪匹配
+
+1. 贪婪匹配：
+
+`/\d{2,5}/g` ：匹配所有 2 到 5 位数的数字。
+
+```javascript
+var pattern = /\d{2,5}/g
+var string = '123 1234 12345 123456'
+console.log(string.match(pattern))
+// => ['123', '1234', '12345', '12345']
+```
+
+`/a+/` ：匹配 1 个或任意多个 a
+
+```javascript
+var text = 'aaaaaab'
+
+// 贪婪匹配
+var greedyMatch = text.match(/a+/)
+console.log(greedyMatch[0])
+// => ['aaaaaa']
+```
+
+2. 惰性匹配：
+
+`/\d{2,5}?/g` ：匹配所有 2 到 5 位数的数字，但是满足条件后就从当前词重新开始。
+
+```javascript
+var pattern = /\d{2,5}?/g
+var string = '123 1234 12345 123456'
+console.log(string.match(pattern))
+// => ['12', '12', '34', '12', '34', '12', '34', '56']
+```
+
+```javascript
+var text = 'aaaaaab'
+var lazyMatch = text.match(/a+?/)
+console.log(lazyMatch)
+// => ['a']
+```
+
+当使用分支结构时，匹配也是惰性的。
+
+```javascript
+var pattern = /java|javascript/g
+var string = 'javascript'
+// => ['java']
+```
+
+### 正则断言
+
+1. 正向先行断言：(positive lookahead)
+
+`(?=o)` ：`o` 的子模式，匹配 `o` 前面的位置，是一种零宽度断言，用于确定位置而不会实际捕获或匹配文本。
+
+```javascript
+var pattern = /(?=o)/g
+var string = 'google'
+console.log(string.replace(pattern, '*'))
+// => g*o*ogle
+```
+
+2. 负向先行断言：(negative lookahead)
+
+`(?!o)` ：与 `(?=o)` 相反。
+
+```javascript
+var pattern = /(?!o)/g
+var string = 'google'
+console.log(string.replace(pattern, '*'))
+// => *goo*g*l*e
+```
+
+3. 正向后行断言 `(?<=p)` 与负向后行断言 `(?<!p)` （ES6）
+
+### 分组与引用
+
+1. 引用分组
+
+使用 `()` 建立一个分组：
+
+```javascript
+var pattern = /(\d{4})-(\d{2})-(\d{2})/
+var string = '2023-10-14'
+console.log(pattern.exec(string))
+// => ['2023-10-14', '2023', '10', '14',  index: 0, input: '2023-10-14', groups: undefined]
+// alternatives:
+// console.log(string.match(pattern))
+```
+
+其中，`RegExp.prototype.exec` 返回的数组中：
+
+- 第 0 项：与正则匹配的字符串；
+- 第 1-n 项：被正则表达式所捕获的捕获组；
+- `input`：输入的正则表达式；
+- `groups`：被命名的捕获组；
+
+> 在设置了 [`global`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) 或 [`sticky`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) 标志位的情况下（如 `/foo/g` 或 `/foo/y`），JavaScript [`RegExp`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/RegExp) 对象是*有状态*的。它们会将上次成功匹配后的位置记录在 [`lastIndex`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex) 属性中。使用此特性，`exec()` 可用来对单个字符串中的多次匹配结果进行逐条的遍历（包括捕获到的匹配），而相比之下， [`String.prototype.match()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String/match) 只会返回匹配到的结果。
+>
+> —— MDN
+
+2. 命名分组
+
+使用 `(?<custom_name>)` 命名分组，会显示在 `groups` 里面：
+
+```javascript
+var pattern = /(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/
+var string = '2023-10-14'
+console.log(pattern.exec(string))
+// => [
+// '2023-10-14', '2023', '10', '14',  index: 0, input: '2023-10-14',
+// groups: { year: '2023', month: '10', day: '14' }
+// ]
+```
+
+3. 非捕获分组
+
+使用 `(?:)` 只分组，不进行分组捕获，分组捕获会损耗性能。
+
+```javascript
+var pattern = /(?:\d{4})-(\d{2})-(?<day>\d{2})/
+var string = '2023-10-14'
+console.log(pattern.exec(string))
+// => [
+// '2023-10-14', '10', '14', index: 0, input: '2023-10-14',
+// groups: { day: '14' }
+// ]
+```
+
+4. 反向引用
+
+使用 `\1` 到 `\n` 在正则表达式中引用第 n 个分组。
+
+例如匹配日期时间时：
+
+```javascript
+var pattern = /(?:\d{4})(-|.)(?:\d{2})\1(?:\d{2})/
+var trueCase1 = '2023-10-14' // true
+var trueCase2 = '2023.10.14' // true
+var falseCase1 = '2023-10.14' // false
+```
+
+## 正则表达式引擎
+
+### 简述 ~~TL;DR~~
+
+正则表达式定义了匹配规则，输入表达式后，引擎会尝试将正则表达式的当前字符与待匹配字符匹配。正则表达式引擎通常分为两种主要类型：文本驱动引擎（text-directed engine）和正则表达式驱动引擎（regex-directed engine）
+
+#### 正则表达式驱动引擎（regex-directed engine）
+
+正则表达式驱动引擎从正则表达式的开头开始，将当前正则表达式字符与输入的文本进行匹配。如果匹配成功，则引擎进行下一个正则表达式字符与待匹配文本的子串进行匹配；如果匹配失败，引擎将回溯 (backtracks) 到先前匹配成功的位置，尝试更多分支的匹配。
+
+大部分主流编程语言的正则解析采用了采用了正则表达式驱动引擎。
+
+#### 文本驱动引擎（text-directed engine）
+
+文本驱动引擎同样从正则表达式的开头开始进行匹配，但是不同的是，无论匹配的结果成功与否，文本驱动引擎都会尝试正则表达式所有可能的排列。因此，文本驱动引擎永远不会发生回溯。
+
+### Dive Deeper into Regular Expression Engine
+
+上文抛砖引玉地介绍了正则表达式引擎得两种类型，并简述了两种正则表达式引擎的匹配原理。下面开始细究正则表达式引擎的逻辑。
+
+- 正则表达式驱动引擎的数学模型是非确定有限状态机；
+- 文本驱动引擎的数学模型是确定有限状态机；
+
+#### 有限状态机（Finite State Machine）
+
+有限状态机是一种抽象的数学模型，用于描述**有限**的状态集合与状态之前相互转换规则的工具。
+
+1. **状态（States）**：有限状态机的状态是系统可能处于的各种不同情况或状态。状态通常用名称或符号表示。
+2. **转移（Transitions）**：状态之间的转移表示系统从一个状态切换到另一个状态的条件和动作。每个转移通常与一个触发条件相关。
+3. **初始状态（Initial State）**：系统的初始状态是在开始执行时的起始状态。
+4. **终止状态（Final State）**：终止状态表示系统执行的结束状态。终止状态可能不止一个。
+
+![regex_post_img1](/static/images/regular_expression_and_how_it_works/img_1.png)
+
+如图为一个使用有向图表示的有限状态机示意图，也称做状态图。
+
+- 状态图顶点即 S1、S2 代表状态。其中， 双圆圈 S1 代表接受状态。
+
+- 状态图每条边旁边的数字表示向状态机的输入，每条边则表示由于输入导致的状态之间的转换。
+
+图中的状态机表示的功能是检测输入的一串二进制数中是否包含偶数个 0：状态机从状态 S1 开始，如果接收输入为 0，则转移到状态 S2，状态转移方程表示为：
+
+```
+(S1, 0) -> S2
+```
+
+如果接收到输入为 1，则停留在状态 S1；状态 S2 同理；
+
+#### 确定有限状态机（Deterministic Finite Automaton）
+
+确定有限状态机（DFA）是一种有限状态机，他的特点是对于下一个转移的状态是唯一确定的。DFA 不允许出现没有输入字符的状态转移。
+
+#### 非确定有限状态机（Nondeterministic Finite Automaton）
+
+非确定有限状态机（NFA）也是是一种有限状态机，对于不同的输入，他的下一个转移的状态不是固定的，对于任意一个状态和输入字符，NFA 所能转移的状态是一个非空集合。例如第一小节中举例的即是一个非确定有限状态机。
+
+#### 从正则表达式到 NFA
+
+有限状态状态机从开始的初始状态开始读取输入的字符串，状态机使用状态转移函数根据当前状态和当前的输入字符来判断下一个状态，但是 NFA 的下一个状态不是唯一确定的，所以只能确定的是下一个状态集合，这个状态集合还需要依赖之后的输入才能确定唯一所处的状态。如果当状态机完成读取的时候，它处于接收状态的话，则说明 NFA 可以接收这个输入字符串。
+
+正则表达式可以抽象为对一组有特定规则字符串的描述，如 `/^a(b+|c)d$/` 所描述的字符串合集可以枚举为：
+
+```txt
+acd
+abd
+abbd
+abbbd
+...
+```
+
+同样，正则表达式所描述的规则也可以抽象为一个有限状态机：
+
+![regex_post_img2](/static/images/regular_expression_and_how_it_works/img_2.png)
+
+所以，编程语言中的正则表达式，一般是通过有限状态机来实现。正则表达式匹配字符串的过程，可以分解为：
+
+- 正则表达式转换为等价的有限状态机
+- 有限状态机输入字符串执行
+
+对于上面的正则表达式，输入 a 之后，有两种可能，如果后面输入的是 b 或者是 c，则可以匹配成功，状态机在执行过程中，可能需要尝试所有的可能性。在一种可能的匹配路径失败后，还需要回到之前的状态尝试其他路径。这就是“回溯”。
+
+相比之下，DFA 由于对于任意输出的状态是确定的，消除了这种不确定性，所以可以预见，其**执行性能**应该要比 NFA 更好，因为不需要回溯。
+
+NFA 是可以转换为等价的 DFA 的，正则表达式同样可以用 DFA 来实现，从而获得优于 NFA 的执行性能。但是 NFA 转换 DFA 的过程，会消耗更多资源，甚至最终得到的 DFA 要占用大量存储空间（据有的资料的说法，可能会产生指数级增长）。而且，DFA 相比 NFA，在实现一些正则表达式的特性时会更复杂，成本更高。所以当前的许多编程语言，其正则表达式引擎为 NFA 模式。
+
+## 思考 & 优化
+
+考虑到 NFA 在匹配过程中的下一次输入前的转移状态是不确定的，如果代码中的正则表达式产生了大量的回溯，则会导致匹配性能的下降。如何优化正则表达式，从而减少 NFA 回溯的次数，是我们应当在日常开发中考虑到的细节。
+
+例如匹配目标字符为 `"abc"de` 时，而我们需要匹配的字符是 `"abc"` ，即双引号内的任意内容：
+
+```javascript
+var pattern1 = /".*"/
+var pattern2 = /"[^"]*"/
+```
+
+上面的两个正则表达式均可以实现匹配结果，但是对于 NFA 来说，使用 `pattern1` 却比使用后者要多回溯两次，因为因为通配符 `.` 可以匹配双引号，而量词的匹配默认是贪婪的，因此 `.*` 会匹配尽可能多的字符，而不会在第二个双引号处停下。在 `pattern2` 中，`[^"]` 使其不会匹配双引号，所以会在第二个双引号处停止匹配。同样，也可以使用惰性修饰符来修饰量词 `*` ，也可以阻止 NFA 产生回溯。
+
+```javascript
+var pattern3 = /".*?"/
+```
+
+## Epilogue
+
+在写这篇博客的时候，查看了许多资料。其中有一个比较有趣的小知识引起了我的注意，于是我决定将它记录在这里，作为这边博客的结尾———
+
+我以为的匹配邮箱的正则表达式：
+
+```javascript
+var pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+```
+
+实际上，根据 [RFC 5322](https://datatracker.ietf.org/doc/html/rfc5322) 的规范，规范的邮箱匹配格式应该为：
+
+```javascript
+var pattern =
+  /([!#-'*+/-9=?A-Z^-~-]+(\.[!#-'*+/-9=?A-Z^-~-]+)*|"([]!#-[^-~ \t]|(\\[\t -~]))+")@([!#-'*+/-9=?A-Z^-~-]+(\.[!#-'*+/-9=?A-Z^-~-]+)*|\[[\t -Z^-~]*])/
+```

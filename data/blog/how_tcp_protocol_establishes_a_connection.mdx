@@ -1,0 +1,155 @@
+---
+title: TCP 协议如何建立连接
+date: '2024-01-16'
+tags: ['HTTP', 'Network']
+draft: false
+summary: 'TCP 与 UDP 都是计算机网络 OSI 模型中的传输层协议，它们都提供了端到端的数据通信能力。其中 UDP 协议是一种无连接、无状态的协议，而 TCP 协议则是一个全双工的面向连接的协议。'
+---
+
+TCP 与 UDP 都是计算机网络 OSI 模型中的传输层协议，它们都提供了端到端的数据通信能力。其中 UDP 协议是一种无连接、无状态的协议，而 TCP 协议则是一个全双工的面向连接的协议。
+
+## Prologue
+
+TCP 是一种面向连接的协议，它通过在两个通信端点之间建立持久的连接来实现全双工通信。在 TCP 连接中，数据可以双向流动，每一方都可以独立地发送和接收数据。TCP 提供可靠的、面向连接的通信，确保数据的顺序和可靠性。由于 TCP 的连接是全双工的，客户端和服务器之间可以独立地发送和接收数据。下面，让我们详细聊聊 TCP 协议。
+
+## TCP 协议在数据传输的作用
+
+要说为什么 TCP 协议需要建立连接，我们先要明白 TCP 协议在数据传输中的作用：
+
+![post_how_tcp_establish_connection_1](/static/images/how_tcp_protocol_establishes_a_connection/img_1.png)
+
+还是以我们日常开发与生活中中经常访问的网页为例：浏览器发起一个 HTTP GET 请求的时候，请求将通过 IP 与 MAC 层的协同作用，找到访问目标资源的最佳路径。
+
+![post_how_tcp_establish_connection_2](/static/images/how_tcp_protocol_establishes_a_connection/img_2.png)
+
+首先，在 HTTP 层，消息数据将被构建，其中包含用户请求的数据或需要传输的内容。接着，在 TCP 层，每个数据段都会附加一个包含了 TCP 协议相关的控制信息的 TCP 头部。然后，在 IP 层， IP 头部被添加，该头部包含了源地址和目标地址等 IP 协议的信息。最后，在 MAC 层，帧头部被添加，包含了 MAC 地址等物理层的信息。
+
+![post_how_tcp_establish_connection_3](/static/images/how_tcp_protocol_establishes_a_connection/img_3.png)
+
+当路由器接收到数据帧后，会解析其中的 MAC 头部与 IP 头部，并由此确定数据帧的目的地。在确定数据帧的下一跳之后，路由器将重新附加相应的 IP 头部与 MAC 头部，并把数据帧发送交换机。接下来，交换机根据 MAC 地址把数据帧发送到目标主机。目标主机接收到数据后，逐层解析各个协议层的头部信息，包括 MAC 头部、IP 头部和 TCP 头部。在 TCP 层，目标主机接收到的数据段重新组装成完整的请求。最终，整个消息层层上升，达到最顶层即应用层的 HTTP 层。
+
+在上述过程中，以 TCP 协议所在的传输层为分割线：在传输层以下，IP 层和 MAC 层选择路由。在 TCP 层以上，HTTP 层构建请求和响应消息。
+
+综上。TCP 将可变长度的请求转换为多个段，并确保所有部分按其原始顺序到达。这就是 TCP 的作用。
+
+## TCP 头部的格式
+
+在进入本篇的正题 TCP 协议握手之前，还需要介绍一下它 Header 的格式。
+
+![post_how_tcp_establish_connection_4](/static/images/how_tcp_protocol_establishes_a_connection/img_4.png)
+
+如上图所示，前两个字段是 `源端口` 与 `目标端口` ，`源端口` 表示数据包的来源，而“目标端口”表示其的目的地。
+
+以访问本站为例：打开浏览器控制台，选择 Network，刷新页面，点击任意一个网络请求，可以看到，`ixjs.com` 这个网址在 DNS 解析之后，被转换成 IP 地址 `43.138.16.18` ，而 IP 地址冒号后面的数字，所代表的就是刚刚提到的 `目标端口` 。
+
+下面的部分是序列码与 ACK 确认码，序列码用于标识数据包。确认码用于确认数据接受成功。TCP 选项是可选的，用于提供额外的信息。
+
+## TCP 的如何建立连接
+
+终于，我们进入本篇要讲的正题：TCP 协议是如何建立连接的。
+
+TCP 协议需要两个通信端点之间发送三次消息来建立连接，这个过程通常被称为“三次握手”。发送的消息中，主要可以分为以下两类：
+
+- 同步初始序列号（ISN）：确保通信的双方使用相同的起始序列号，以协调数据传输的顺序。
+- 交换参数（例如窗口缩放因子、最大分段大小、选择性确认算法等）：确定连接双方在数据传输中采用的一些参数，以优化通信的效率。
+
+![post_how_tcp_establish_connection_5](/static/images/how_tcp_protocol_establishes_a_connection/img_5.png)
+
+三次握手的步骤如下：
+
+- 客户端发送一个 SYN 包，表示请求建立连接
+- 服务器回复一个 SYN/ACK 包，表示同意建立连接
+- 客户端再回应一个 ACK 包，确认连接已建立
+
+### The 1st Handshake
+
+![post_how_tcp_establish_connection_6](/static/images/how_tcp_protocol_establishes_a_connection/img_6.png)
+
+客户端发起第一次握手，通过发送包含 `初始序列号` 和 `标志位` 的 SYN 包来建立连接。
+
+#### 初始序列号 ISN
+
+`初始序列号` 是一个随机值，不允许为零。
+
+#### 标志位
+
+`标志位` 用于标记数据段的类型。如图所示，第一次握手时，SYN 类型的标志被设置为 1，而其他标志被保持为 0，表示这是一个 SYN 消息。
+
+![post_how_tcp_establish_connection_7](/static/images/how_tcp_protocol_establishes_a_connection/img_7.png)
+
+如图，以访问本站为例，当在浏览器输入链接并按下回车后，ixjs.com 的域名经过 DNS 解析后，向 IP 地址 `43.138.16.18` 发起了网络请求，建立连接。我们可以清晰的看到 SYN 包的 ISN 序列号与 SYN 标志。
+
+### The 2nd Handshake
+
+![post_how_tcp_establish_connection_8](/static/images/how_tcp_protocol_establishes_a_connection/img_8.png)
+
+在接收到客户端的 SYN 包后，服务器将通过进行第二次握手来做出响应，即回送一个 SYN/ACK 包作为响应。
+
+#### 序列号
+
+这次我们将发送到两个序列号：
+
+- 服务器的 `初始序列号` (ISN)：服务器的 `初始序列号` 是一个随机数。（与客户端刚刚发送的初始序列号不同）
+- `确认码` ：基于客户端的` 初始序列号` 生成，具体为
+
+```http
+服务器的确认序列号 = 1 + 客户端的初始序列号
+```
+
+#### 标志位
+
+在标志位中，ACK 和 SYN 都被置为 1。
+
+![post_how_tcp_establish_connection_9](/static/images/how_tcp_protocol_establishes_a_connection/img_9.png)
+
+如上图，可以看到第二次握手中服务器回送的 ISN 与 ACK 的序列号与标志位。
+
+### The 3rd Handshake
+
+![post_how_tcp_establish_connection_10](/static/images/how_tcp_protocol_establishes_a_connection/img_10.png)
+
+客户端收到服务器第二次握手发来的 SYN/ACK 包后，再次向服务器发送 ACK 包。这就是第三次握手。
+
+#### 序列号
+
+客户端将响应一个确认码，与之前相同，响应的确认码也基于服务器发送的初始序列号 ISN 生成的：
+
+```http
+客户端的确认序列号 = 1 + 服务器的初始序列号
+```
+
+#### 标志位
+
+只有 ACK 被置为 1
+
+![post_how_tcp_establish_connection_11](/static/images/how_tcp_protocol_establishes_a_connection/img_11.png)
+
+如图例，我们可以看到客户端返回的 ACK 包的确认码与标志位。
+
+## TCP 连接期间的状态变化
+
+![post_how_tcp_establish_connection_12](/static/images/how_tcp_protocol_establishes_a_connection/img_12.png)
+
+最初，两端都处于关闭状态。为了提供服务，我们需要先开启服务端的对应端口，例如 HTTP 协议的 80 端口或者是 HTTPS 协议的 443 端口，此时，服务端进入了监听状态。
+
+在第一次握手中，浏览器发送了一个 SYN 包，随即，客户端的 TCP 状态变为 SYN-Sent 状态。
+
+![post_how_tcp_establish_connection_13](/static/images/how_tcp_protocol_establishes_a_connection/img_13.png)
+
+当服务器收到 SYN 包时，会将 SYN 包放入 SYN 队列中，服务器的 TCP 状态进入 SYN-Received 状态。然后，服务器发送 SYN/ACK 包，也就是第二次握手。
+
+浏览器接收到消息，其 TCP 进入已建立状态，并向服务器发送最后的 ACK 包。
+
+服务器收到 ACK 包后，会把请求帧从 SYN 队列中移出，放入 ACCEPT 队列中。此时连接便建立了。如果有类似 Nginx 之类的代理服务器，则连接实际上是由代理服务器处理的。
+
+### 查看服务器建立的所有连接
+
+建立了 TCP 链接后，在服务器里可以使用我们比较熟悉的 netstat 工具查看所有已经建立的 TCP 连接。
+
+![post_how_tcp_establish_connection_14](/static/images/how_tcp_protocol_establishes_a_connection/img_14.png)
+
+我们使用了 `netstat` 展示了所有活动连接和侦听端口，而且以数字形式显示IP地址和端口号，并过滤了其中状态为 `ESTABLISHED` 的连接。可以看到，我们使用了 63534 端口与服务器的 443 端口建立了 TCP 连接。其中，`10.0.8.6:443` 展示的是服务器的本机地址。具体可以通过 `ifconfig` 查看 `eth0`
+
+## Epilogue
+
+TCP 承担了确保消息可靠传递的任务，而其他网络层不太关心这个问题。为了履行这一职责，需要建立一个连接，为了建立连接，TCP采用了一种称为 “三次握手” 的过程。而握手过程中的序列号、确认号以及标志位是理解这一过程的核心，因为每次握手都导致客户端和服务器端TCP连接状态的变化。
