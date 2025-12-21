@@ -1,0 +1,99 @@
+---
+title: 使用 acme 自动更新 SSL 证书
+date: '2024-06-01'
+tags: ['Linux', 'Network']
+draft: false
+summary: 'SSL（Secure Sockets Layer）证书是一种数字证书，用于在网络通信中提供安全加密。SSL 证书的主要功能是确保客户端和服务器之间的数据传输是加密的，从而防止数据在传输过程中被窃听、篡改或伪造。'
+---
+
+> SSL（Secure Sockets Layer）证书是一种数字证书，用于在网络通信中提供安全加密。SSL 证书的主要功能是确保客户端和服务器之间的数据传输是加密的，从而防止数据在传输过程中被窃听、篡改或伪造。
+
+## Prologue
+
+又到了一年一度的 SSL 证书更新环节，本来打算继续手动申请的，反正一年更新一次也不会花太多时间。手动更新证书也正好是一个驱动我来顺带更新几篇文章的驱动。
+
+由于服务器当时购买的是腾讯云，所以域名解析也就一起用了他家的 DNSPod，但是等到我正准备手动申请证书的时候，突然发现：**免费 SSL 证书只有 3 个月有效期了！！** [相关公告](https://cloud.tencent.com/document/product/400/104538)
+
+天塌了呀有木有。T \_ T，这下手动更新频率直接从一年一次变成到一年四次。
+
+## 探索自动化解决方案
+
+本来打算看看有没有申请证书的 API，然后自己写一个 cron job 脚本每两个月跑一次，但是等我打开浏览器，直接发现了咱们今天的主角—— [ACME](https://github.com/acmesh-official/acme.sh)
+
+### 上手 ACME
+
+首先需要下载它的脚本：
+
+```bash
+$ curl https://get.acme.sh | sh -s email=<自己的邮箱>
+```
+
+由于我使用的是腾讯家的 DNSPod，所以还需要在环境变量中导出自己的 SecretId 和 SecretKey
+
+```bash
+$ export Tencent_SecretId="<Your SecretId>"
+$ export Tencent_SecretKey="<Your SecretKey>"
+```
+
+接着就可以使用 acme 申请证书啦：
+
+```shell
+$ acme.sh --issue --dns dns_tencent -d ixjs.com -d *.ixjs.com
+```
+
+在这里，我直接指定了域名解析商为 `dns_tencent` 。等到命令执行完，证书就已经被保存到 `~/.acme.sh/ixjs.com/` 目录下了。但是 ACME 官方不建议直接使用 `~/.acme.sh/` 目录下的证书：
+
+> **DO NOT** use the certs files in **~/.acme.sh/** folder, they are for internal use only, the folder structure may change in the future.
+
+取而代之的是需要使用 `acme.sh` 把证书安装到其他目录下面，于是：
+
+```bash
+$ acme.sh --install-cert -d ixjs.com \
+  --key-file       /usr/local/nginx/https_certificate/key.pem \
+  --fullchain-file /usr/local/nginx/https_certificate/cert.pem \
+  --reloadcmd     "service nginx force-reload"
+```
+
+由于我使用的是 Nginx，所以 `--reloadcmd` 用的是这个 `service nginx force-reload` ，你可能需要根据自己的情况修改 `--reloadcmd` 来重启服务。
+
+接下来，需要手动修改一下 Nginx 的配置：
+
+```nginx
+server
+    {
+        listen 443 ssl http2;
+        # listen [::]:80 default_server ipv6only=on;
+        server_name ixjs.com;
+
+        ssl_certificate /usr/local/nginx/https_certificate/cert.pem;
+        ssl_certificate_key /usr/local/nginx/https_certificate/key.pem;
+  			# 省略其余配置 ...
+		}
+```
+
+最后，重启一下 Nginx：
+
+```bash
+$ systemctl reload nginx
+```
+
+接下来，`acme.sh` 已经托管了证书的刷新工作，大功告成！
+
+![ssl_certificate_auto_renew_1](/static/images/ssl_certificate_auto_renew/img_2.jpg)
+
+## Epilogue
+
+简单查看一下 `acme.sh` 任务：
+
+```bash
+$ crontab -l
+53 0 * * * "/root/.acme.sh"/acme.sh --cron --home "/root/.acme.sh" > /dev/null
+```
+
+---
+
+### 后续更新 2024.07.30
+
+证书刷新了，符合预期。
+
+![ssl_certificate_auto_renew_1](/static/images/ssl_certificate_auto_renew/img_1.png)

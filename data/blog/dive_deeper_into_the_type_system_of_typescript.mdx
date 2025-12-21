@@ -1,0 +1,280 @@
+---
+title: 深入理解 TypeScript 的类型系统
+date: '2024-03-24'
+tags: ['TypeScript']
+draft: false
+summary: 'TypeScript 由于其灵活的类型系统而受到广大前端开发者的追捧，由于其强大的类型推断能力和静态类型检查，开发者能够在编码阶段就发现潜在类型的错误......'
+---
+
+> TypeScript 由于其灵活的类型系统而受到广大前端开发者的追捧，由于其强大的类型推断能力和静态类型检查，开发者能够在编码阶段就发现潜在类型的错误......
+
+但是 TypeScript 的静态类型检查真的是完全安全的吗？
+
+## TypeScript Quick Start
+
+TypeScript 作为 JavaScript 的超集，与 JavaScript 相同，在一个对象内 TypeScript 有两种定义函数的形式——普通函数与箭头函数：
+
+```typescript
+const obj = {
+  normalFunction(param: string) {
+    console.log(param)
+  },
+  arrowFunction: (param: string) => {
+    console.log(param)
+  },
+}
+```
+
+与之相对应的，作为一个静态类型语言，TypeScript 可以通过声明接口的方式来标注类型，对于函数类型的标注也有两种形式——简写函数语法与对象属性语法：
+
+```typescript
+interface Obj {
+  normalFunction(param: string): void // Shorthand Method Syntax
+  arrowFunction: (param: string) => void // Object property syntax
+}
+const obj: Obj = {
+  // 同上
+  ...
+}
+```
+
+上述代码中，声明了 obj 变量的的同时标注了其为 Obj 类型，这使得 obj 类型必须含有 `normalFunction` 与 `arrowFunction` 的实现，否则将无法通过代码静态检查：
+
+```typescript
+const obj2: Obj = {}
+//		^^^^
+// Type '{}' is missing the following properties from type 'Obj': normalFunction, arrowFunctionts(2739)
+```
+
+## “百密一疏”的静态检查
+
+既然 TypeScript 的代码静态检查会帮助我们发现 **未定义** 的属性与函数，减少运行时调用空函数的错误，那么我们是否可以完全信任 TypeScript 的类型检查吗？否。
+
+为了更好的说明问题，请看如下例子：
+
+### 背景
+
+我们先定义一个 `Animal` 接口，由于小动物之间可以一起玩耍，所以我们这样定义：
+
+```typescript
+interface Animal {
+  playWith(animal: Animal): void
+}
+```
+
+再定义一个 `Cat` 类型继承 `Animal` 接口，并且让小猫能 ~~遍历~~ 爬树：
+
+```typescript
+interface Cat extends Animal {
+  climbTree(): void
+  // preorderTraverseTree(): void // @TODO 这行写错了，需要删除
+}
+```
+
+定义接口后，我们就可以根据接口的定义声明变量——一条狗 `dog`，暂时只让它与猫玩耍：
+
+```typescript
+const dog: Animal = {
+  playWith(cat: Cat) {
+    cat.climbTree()
+  },
+}
+```
+
+我们定义第二只小动物 `pig`：
+
+```typescript
+/**
+ * @Important 猪不会爬树
+ */
+const pig: Animal = {
+  playWith(animal: Animal) {
+    // ...
+  },
+}
+```
+
+### 悄无声息的运行时错误（runtime error）
+
+现在，我们想让 dog 与 pig 一起玩耍：
+
+```typescript
+dog.playWith(pig) // static type checking passed, runtime error here!
+```
+
+上述代码在编译时能够通过 TypeScript 的静态类型检查，但是由于 **pig 不会上树（pig 没有实现 `climbTree` 函数）**，代码在实际运行时会报错。
+
+## 变量类型的逆变与协变
+
+在此分析问题发生原因之前，需要讲述变量类型转换规则。
+
+### 协变（Covariance）
+
+协变在新的类型容器中，保持了子类型关系：如果类型 A 是类型 B 的子类型，那么 `C<A>` 是 `C<B>` 的子类型。
+
+### 逆变（Contravariance）
+
+逆变是协变的对立面。在逆变中，如果类型 A 是类型 B 的子类型，那么 `C<B>` 是 `C<A>` 的子类型。
+
+### 类型的安全
+
+试想三种类型：
+
+```typescript
+interface Animal {}
+interface Cat extends Animal {}
+interface Tom extends Cat {}
+```
+
+那么对于函数 foo 来说：
+
+```typescript
+function foo(cat: Cat): Cat
+```
+
+下面四个函数中，哪个是 `foo` 的子类型？
+
+```typescript
+function bar1(cat: Tom): Tom
+function bar2(cat: Tom): Animal
+function bar3(cat: Animal): Animal
+function bar4(cat: Animal): Tom
+```
+
+#### 1. 参数协变
+
+对于函数 `bar1` 、 `bar2` 我们可以放到一起来看，他们都是将参数由 `Cat` 协变为 `Tom` ，我们可以假设将这两个函数作为回调函数传入某个函数的参数中：
+
+```typescript
+function callFunc(cb: (cat: Cat) => Cat): void
+```
+
+由于 `callFunc` 调用时，可能会向 `cb` 传入任何属于 `Cat` 类型但不是 `Tom` 类型的值，这会导致 `cb` 在调用独属于 `Tom` 的属性是会出现错误。从语义上理解弄说： `callFunc` 有可能向 `cb` 传入任何一种猫，比如加菲猫——它只会吃千层面，而不会抓老鼠，这显然不合理。
+
+因此参数的协变 **不是** 类型安全的。
+
+#### 2. 返回值的逆变
+
+对于函数 `bar3` ，它的类型返回值由 `Cat` 逆变为 `Animal` ，这同样不是类型安全的。我们还是将这个函数传入 `callFunc` 中调用，如果 `callFunc` 中对 `cb` 的返回值进行了处理，也就是让 `Animal` 爬树。并非所有动物都会爬树。
+
+返回值的逆变 **不是** 类型安全的
+
+#### 3. 参数的逆变与返回值的协变
+
+函数 `bar4` 是将参数逆变，并将返回值协变。`callFunc` 可以以任何猫的品种来调用，而所有猫都是动物。其次，它会假设结果是一种特定种类的猫，所有“Tom”都是猫。
+
+因此，参数发生逆变与返回值发生协变都 **是** 安全的。
+
+### Summary
+
+综上，我们得出结论：
+
+```
+(Animal → Tom) ≤ (Cat → Cat)
+```
+
+我们允许一个函数类型中，返回值类型是*协变*的，而参数类型是*逆变*的。返回值类型是协变的，意思是 `A ≼ B` 就意味着 `(T → A) ≼ (T → B)` 。参数类型是逆变的，意思是 `A ≼ B` 就意味着 `(B → T) ≼ (A → T)` （ `A` 和 `B` 的位置颠倒过来了）。
+
+## 原因分析
+
+在我们了解协变与逆变的概念后，再来看看最初的例子中，变量 `dog` 是如何实现的：
+
+```typescript
+const dog: Animal = {
+  playWith(cat: Cat) {
+    cat.climbTree()
+  },
+}
+```
+
+注意到，`playWith` 函数在实现时发生参数的协变，这不是一个安全的类型变换。由此导致了后续一系列的问题。尽管如此，代码依旧通过了静态类型检查，可见，TypeScript 的参数类型是既允许逆变，也允许协变的。
+
+### TypeScript 参数的双向协变
+
+TypeScript 参数的双向协变的问题并不安全，我们不禁发问，为什么要这样设计？
+
+举例说明一个常见的例子——浏览器中的事件类型：
+
+```typescript
+interface Event {
+  timestamp: number
+}
+interface MouseEvent extends Event {
+  x: number
+  y: number
+}
+interface KeyEvent extends Event {
+  keyCode: number
+}
+/** 事件监听 */
+enum EventType {
+  Mouse,
+  Keyboard,
+}
+function addEventListener(eventType: EventType, handler: (n: Event) => void) {
+  /* ... */
+}
+```
+
+当我们希望添加事件监听时，经常会这么写：
+
+```typescript
+addEventListener(EventType.Mouse, (e: MouseEvent) => console.log(e.x + ',' + e.y))
+```
+
+回调函数预期传入一个 `(n: Event) => void` ，但是我们传入了 `(e: MouseEvent) => void` 的函数，参数发生了不安全的协变，如果 `handler` 函数实际上接收到的事件是 `KeyEvent` 类型，那么就会导致运行时错误，因为 `KeyEvent` 类型没有 `x` 和 `y` 属性。
+
+上述写法允许的原因就是因为 TypeScript 的参数是双向协变的，如果不允许参数双向协变，那我们则需要进行类型断言：
+
+```typescript
+// 调用 e 时断言
+addEventListener(EventType.Mouse, (e: Event) =>
+  console.log((<MouseEvent>e).x + ',' + (<MouseEvent>e).y)
+)
+// 对函数进行断言，告诉 TypeScript 编译器函数必定会接收到 `Event` 类型的参数
+addEventListener(EventType.Mouse, <(e: Event) => void>(
+  ((e: MouseEvent) => console.log(e.x + ',' + e.y))
+))
+```
+
+此外，还有一个完全不兼容的写法，由于 `number` 与 `Event` 完全不兼容，下面的写法将会报错，需要使用双重断言才能解决。
+
+```typescript
+document.addEventListener('click', (e) => console.log(e as number)) // error!
+document.addEventListener('click', (e) => console.log(e as unknown as number)) // okay
+```
+
+数组中，也有类似的问题：在确定 `Array<Cat>` 是否可以被赋值给 `Array<Animal>` 之前，TypeScript 需要进行一系列计算：
+
+- `Array<Cat>` 可以被赋值给 `Array<Animal>` 吗？
+- `Array<Cat>` 的每个 `Cat` 成员可以被赋值给 `Array<Animal>` 吗？
+- `Array<Cat>.prototype.push` 可以被赋值给 `Array<Animal>.prototype.push` 吗？
+- 类型 `(x: Cat) => number` 可以赋值给 `(x: Animal) => number` 吗？
+- ... ...
+- `Array<Cat>` 可以被赋值给 `Array<Animal>` 。
+
+可以看到，TypeScript 在确认 `Array<Cat>` 可以赋值给 `Array<Animal>` 之前，必须要问“类型 `(x: Cat) => number` 可以赋值给 `(x: Animal) => number` 吗？”如果 TypeScript 强制要求参数逆变，那么 `Array<Cat>` 就不能被赋值给 `Array<Animal>` 。这将导致类型系统令人难以接受，因此 TypeScript 在这里做出了权衡，允许函数参数的双变性，即使这可能会导致类型错误。
+
+## Quick Fix
+
+解决问题的方法很简单，还记得前文中提到的对函数类型的两种定义方式吗？我们只需要将定义 Animal 接口的类型由之前的简写函数语法改为对象属性语法，此时 `dog` 在实现 `playWith` 函数的时，参数会被禁止协变。
+
+```typescript
+interface Animal {
+  // playWith(animal: Animal): void // @deprecated
+  playWith: (animal: Animal) => void
+}
+const dog: Animal = {
+  playWith(cat: Cat) {
+    //  ^^
+    //  Type '(cat: Cat) => void' is not assignable to type '(animal: Animal) => void'.
+    //  Types of parameters 'cat' and 'animal' are incompatible.
+    //  Property 'climbTree' is missing in type 'Animal' but required in type 'Cat'.
+    cat.climbTree()
+  },
+}
+```
+
+## Referance
+
+[why are function parameters bivariant](https://github.com/microsoft/TypeScript/wiki/FAQ#why-are-function-parameters-bivariant)
