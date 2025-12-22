@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-lts # 明确使用与服务器相同的版本
+    runs-on: ubuntu-latest # 使用 GitHub 提供的最新标准 Ubuntu 环境
 
     steps:
       - name: Checkout code
@@ -57,4 +57,4 @@ jobs:
             tar -xzf output.tar.gz
             rm output.tar.gz
             npm install --production
-            pm2 restart next-app || pm2 start npm --name "next-app" -- start
+            pm2 restart blog || pm2 start npm --name "blog" -- start
