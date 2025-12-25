@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest # 使用 GitHub 提供的最新标准 Ubuntu 环境
+    environment: Production
 
     steps:
       - name: Checkout code
