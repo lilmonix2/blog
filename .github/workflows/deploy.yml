@@ -26,14 +26,14 @@ jobs:
           echo "NEXT_PUBLIC_GISCUS_CATEGORY_ID=${{ secrets.NEXT_PUBLIC_GISCUS_CATEGORY_ID }}" >> .env.local
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: Build project
-        run: npm run build
+        run: yarn build
 
       - name: Archive build files
         run: |
-          tar -czf output.tar.gz .next public package.json package-lock.json .env.local
+          tar --exclude='.next/cache' -czf output.tar.gz .next public package.json yarn.lock .env.local
 
       - name: Upload via SCP to remote server
         uses: appleboy/scp-action@v0.1.7

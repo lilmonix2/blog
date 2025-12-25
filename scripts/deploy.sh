@@ -46,7 +46,7 @@ if [ -f "ecosystem.config.js" ]; then
 fi
 
 # COPYFILE_DISABLE=1 防止 macOS 的 tar 包含特殊属性导致 Linux 下报错/警告
-COPYFILE_DISABLE=1 tar --no-xattrs -czf output.tar.gz $FILES_TO_PACK
+COPYFILE_DISABLE=1 tar --exclude='.next/cache' --no-xattrs -czf output.tar.gz $FILES_TO_PACK
 echo "打包完成: output.tar.gz"
 
 # 3. 上传到服务器
