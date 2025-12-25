@@ -10032,6 +10032,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-photo-view@npm:^1.2.7":
+  version: 1.2.7
+  resolution: "react-photo-view@npm:1.2.7"
+  peerDependencies:
+    react: ">=16.8.0"
+    react-dom: ">=16.8.0"
+  checksum: 5ce79dcdd3a1fb82aa5afbb1e9dba8ae53bae2c4b1df32ef3ad699ca1308e03a7ed9a40e2fd634c82f0fcba3449a63480c7b2c8ad38abe80c6271d75f83e9f56
+  languageName: node
+  linkType: hard
+
 "react-virtual@npm:^2.8.2":
   version: 2.10.4
   resolution: "react-virtual@npm:2.10.4"
@@ -11682,6 +11692,7 @@ __metadata:
     prettier-plugin-tailwindcss: ^0.6.11
     react: 19.0.3
     react-dom: 19.0.3
+    react-photo-view: ^1.2.7
     reading-time: 1.5.0
     rehype-autolink-headings: ^7.1.0
     rehype-citation: ^2.3.0
