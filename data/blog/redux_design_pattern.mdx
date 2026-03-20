@@ -1,0 +1,224 @@
+---
+title: 浅谈 Redux 的设计模式
+date: '2025-1-20'
+tags: ['JavaScript', 'Redux']
+draft: false
+summary: '聊聊前端的状态管理与 Redux 的设计理念'
+---
+
+> Redux 是一个用于 JavaScript 应用的状态管理库，通常与 React 一起使用。Redux 提供了一种集中化的方式来管理应用的状态，使得状态变化可预测和可调试。
+
+## Start up
+
+在前端开发中，状态管理可以算是一个老生常谈的话题。我们经常会遇到不同组件需要共享同一个数据源的状况，通常的做法是通过父组件传递数据到子组件中进行渲染。但是如果渲染组件与数据源的组件嵌套层级过深的话，逐级传递似乎也不是一个较为优雅的方案。此时，则需要采取一些方式进行状态管理。
+
+目前有许多流行的状态管理库，他们的设计第一眼看上去都比较复杂与“冗余”，让人不能即刻上手。但是他们都是遵循着一些特定的规则与工程实践思想去设计的，即：抽离需要共享的状态，统一管理，让状态的变化可以预测。
+
+接下来让我们由浅入深，从最简单的例子看看状态设计：
+
+## 状态管理的“史前时代”：localStorage
+
+在讨论复杂的设计模式之前，我们不妨先看看最直觉、最原始的状态管理方式。试想，如果我们需要在不同页面间共享用户的登录态，最简单的方法是什么？
+
+```javascript
+// 存储数据
+localStorage.setItem('userName', 'lilmonix2')
+
+// 在另一个组件/页面读取
+const name = localStorage.getItem('userName')
+```
+
+这看起来非常完美：这个方法原生支持、跨页面持久化、调用简单。但为什么我们不直接用 `localStorage` 来管理整个应用的状态呢？
+
+1. **缺乏响应式（Reactivity）**：当我们修改了 `localStorage` 中的值，视图（View）并不会自动更新。我们需要手动监听事件或者刷新页面，这在现代单页应用（SPA）中是不可接受的。
+2. **读写昂贵**：`localStorage` 的操作是同步的 IO 行为。频繁地进行 JSON 序列化和磁盘读写，在大规模状态下会产生显著的性能瓶颈。
+3. **类型安全缺失**：作为全局的“大黑盒”，任何脚本都可以随意读写其中的内容，状态的变化完全不可预测，更别提配合 TypeScript 这种强类型检查了。
+
+因此，我们需要一套**运行在内存中**、**具备响应式能力**的方案。
+
+## 视图与逻辑的强耦合：data-\* 属性
+
+除了上述方法，利用 DOM 节点来传递参数也是很常见的。
+
+试想一个商品列表，点击按钮需要知道商品 ID。在没有统一状态管理时，我们往往会把参数“埋”在 HTML 里：
+
+```html
+<!-- 视图层：埋入数据 -->
+<button data-id="p_9527" data-price="100" class="buy-btn">购买</button>
+
+<script>
+  // 逻辑层：从 DOM 中“挖“出数据
+  document.querySelector('.buy-btn').addEventListener('click', (e) => {
+    const productId = e.target.dataset.id
+    const price = Number(e.target.dataset.price)
+    // 执行后续逻辑...
+  })
+</script>
+```
+
+这种 `data-*` 的传参方式在 jQuery 时代项目中非常流行。虽然它比 `localStorage` 更贴近业务流程，但却带来了两个致命问题：
+
+1. **类型丢失**：DOM 属性只能存字符串。如上例所示，我们必须手动进行 `Number()` 转换，甚至在处理复杂对象时会演变成噩梦般的 `JSON.parse`。
+2. **逻辑碎片化**：业务数据被散落在成千上万个 DOM 节点中。如果业务需要在“购物车组件”里获取“列表组件”里的商品 ID，我们不得不进行大量的 DOM 查询或父子组件通信，导致代码极度耦合。
+
+这就是为什么我们需要把数据从 DOM 中剥离出来，建立一个独立的、纯粹的 JavaScript 对象作为单一实例来源。
+
+## How Redux works?
+
+### Store 与 Action
+
+试想一个最基础的状态，我们拥有一个 store，里面的属性 `state` 用于存储数据。
+
+```javascript
+const store = {
+  state: {
+    userName: 'lilmonix2',
+    creditBalance: 200,
+  },
+}
+```
+
+我们如果想修改 `creditBalance` ，则为它定义一些方法：
+
+```javascript
+const store = {
+  state: {
+    userName: 'lilmonix2',
+    creditBalance: 200,
+  },
+  addCreditBalanceAction(num) {
+    this.state.creditBalance += num
+  },
+  clearCreditBalanceAction() {
+    this.state.creditBalance = 0
+  },
+}
+```
+
+如果我们的某一块业务逻辑希望对 `creditBalance` 进行修改，则需要通过调用 `state` 方法暴露出来的方法而不是直接 `store.state.creditBalance` 进行修改，而每次通过调用方法的形式修改 `creditBalance` 就是一个 `Action` 。这样确保了任何对 `creditBalance` 的操控都是可控与可追溯的，例如在上面的例子中，我们没有定义对 `creditBalance` 进行消费的行为，这样就确保了它的值只会增长与清空。
+
+### 统一的入口：Dispatcher
+
+随着业务逻辑的增加，我们的 `store` 可能会变得非常臃肿。如果每一个状态的修改都需要在 `store` 对象上挂载一个具体的方法，那么当应用拥有成百上千个状态时，维护这个 `store` 对象将变成一坨史诗级的“屎山代码”。
+
+为了解决这个问题，我们需要一个“中转站”，也就是 `Dispatcher` 。我们不再调用特定的方法（如 `addCreditBalanceAction`），而是向 store 发送一个包含 **意图** 的指令。
+
+```javascript
+// 我们定义一个统一的 dispatch 方法
+store.dispatch = function (action) {
+  switch (action.type) {
+    case 'ADD_CREDIT':
+      this.state.creditBalance += action.payload
+      break
+    case 'CLEAR_CREDIT':
+      this.state.creditBalance = 0
+      break
+    default:
+      console.warn('Unknown action type')
+  }
+}
+
+// 业务层调用
+store.dispatch({ type: 'ADD_CREDIT', payload: 100 })
+```
+
+这样做的好处显而易见：`store` 暴露给外部的接口变简单了，只需要一个 `dispatch` 方法。所有的逻辑都被收拢到了 `switch-case` 内部。
+
+### 逻辑拆解：Reducer
+
+虽然有了 `Dispatcher`，但 `dispatch` 内部的逻辑依然在不断膨胀。按照软件工程“单一职责”的原则，我们应该把“如何修改状态”的逻辑抽离出来，这就是所谓的 `Reducer` 。
+
+`Reducer` 本质上是一个纯函数，它接收 **旧的状态** 和 **动作 (Action)**，并返回 **新的状态**。
+
+```javascript
+// 抽离出的修改逻辑
+function creditReducer(state, action) {
+  switch (action.type) {
+    case 'ADD_CREDIT':
+      return { ...state, creditBalance: state.creditBalance + action.payload }
+    case 'CLEAR_CREDIT':
+      return { ...state, creditBalance: 0 }
+    default:
+      return state
+  }
+}
+```
+
+**为什么必须返回一个新对象？**
+
+Redux 强调“不可变性”（Immutability）。返回新对象不仅能让状态的变化变得可追踪，还能让 UI 框架（如 React）通过简单的引用对比（`prevProps !== nextProps`）来快速决定是否需要重新渲染。
+
+### Redux 的数据流向
+
+至此，Redux 的三个核心概念已经呼之欲出：`Store`（保存状态）、`Action`（描述意图）、`Reducer`（执行修改）。它们构成了一个单向的数据流：
+
+![post_how_tcp_establish_connection_1](/static/images/redux_design_pattern/1.png)
+
+1. **用户操作**：用户点击按钮，触发一个意图。
+2. **派发 Action**：调用 `dispatch`，并将包含动作类型的对象传进去。
+3. **计算新状态**：`Store` 调用 `Reducer`，传入当前状态和 Action。
+4. **状态更新**：`Reducer` 返回新状态，`Store` 更新内部存储。
+5. **视图渲染**：`Store` 通知 UI 框架状态已变，界面完成刷新。
+
+## 现代工业化标准：Redux Toolkit (RTK)
+
+虽然上面我们手写了一套 Redux 流程，但在实际的工程项目中，手动维护 Action Type 常量和繁琐的 switch case 实在是太痛苦了。为了解决这个痛点，官方推出了 **Redux Toolkit (RTK)**。
+
+RTK 的核心是 `createSlice` 。它通过一个配置对象，自动帮我们生成了 Action 和 Reducer，极大地减少了模版代码：
+
+```javascript
+import { createSlice } from '@reduxjs/toolkit'
+
+const userSlice = createSlice({
+  name: 'user',
+  initialState: { creditBalance: 200 },
+  reducers: {
+    addCredit: (state, action) => {
+      state.creditBalance += action.payload
+    },
+    clearCredit: (state) => {
+      state.creditBalance = 0
+    },
+  },
+})
+
+// 自动生成的 Action
+export const { addCredit, clearCredit } = userSlice.actions
+export default userSlice.reducer
+```
+
+> 细心的读者可能发现了，我们在 `addCredit` 里直接使用了 `+=` 这种修改原始对象的方式。这在原生 Redux 中是违规操作。但在 RTK 中，它集成了 `Immer` 库，会自动拦截这些修改并转化为“不可变更新”。因此咱们可以像写普通 JS 对象一样去写逻辑，而不用担心破坏 Redux 的预测性。
+
+## 尾声&彩蛋
+
+Redux 的设计初衷并非为了“简单”，而是为了“可预测”。通过强制要求单向数据流和纯函数修改逻辑，它把复杂的异步状态变化变得像流水线一样清晰。
+
+### 为什么叫 Reducer？
+
+第一次接触这个类似的方法的时候我是从 `Array.prototype.reduce()` 这个方法了解到的。因为直接看上去，reduce 的意思其实就是“减少”。当时我也很疑惑，为什么一个“减少”意思的单词，最终会成为一个迭代器函数呢？
+
+其实，这个概念很早就被提出来了，它命名源于函数式编程中的 `reduce` 操作（在有的语言例如 Rust 中也叫 `fold`，折叠）。虽然名字不同，但是它们都是在做一件事，那就是 “遍历集合，维护一个累加器，并输出一个结果”。这个概念真正在编程领域火起来还是因为 Google 的一篇论文：
+
+[《MapReduce: Simplified Data Processing on Large Clusters》](https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf)
+
+它主要提出的两个概念就是 `MapReduce` ，复杂的分布式计算抽象为两个简单的步骤~~（把大象关进冰箱需要几步？）~~：生成映射（Map）、合并结果（Reduce）。例如统计词频，先根据输入来创建映射的键值对：`{word, 1}` ，然后合并结果，例如将所有的`{word, 1}` 累加得到该词语才总词数。
+
+试想 JavaScript 中的 `Array.prototype.reduce()` ：它接收一个回调函数和一个累加器，将数组中的多个值“折叠”成一个单一的输出值。Redux 也同理，Redux 的设计者认为，**整个应用的状态，本质上就是由一系列 Action 组成的数组，被不断地“折叠”进初始状态（Initial State）的结果。**
+
+`(previousState, action) => nextState`
+
+它不是在减少，而是在“归纳”。它把分散的、随时间流逝发生的数据变更，归纳成了一个代表“现在”的唯一状态。
+
+### 尾声
+
+最后，分享一下最近读到的一本书里面截取的一段话，个人很喜欢这一段。
+**新年快到了，祝广大网上邻居新的一年里身体健康，万事如意。**
+
+：）
+
+![post_how_tcp_establish_connection_1](/static/images/redux_design_pattern/2.png)
+
+### For Further Reading:
+
+关于 Google 的那篇论文：
+[《MapReduce: Simplified Data Processing on Large Clusters》](https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf)
