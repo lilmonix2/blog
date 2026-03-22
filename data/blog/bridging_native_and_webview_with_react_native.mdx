@@ -1,0 +1,287 @@
+---
+title: 使用 React Native 桥接原生 App 与 Webview
+date: '2025-04-22'
+tags: ['React Native', 'JavaScript', 'TypeScript']
+draft: false
+summary: '在混合开发的场景下，如何优雅地实现 Web 与 Native 的双向通信？本文将通过 React Native 的实践，深度解析 JS Bridge 的设计思路、通信协议以及在支付等复杂业务中的应用。'
+---
+
+> "Any problem in computer science can be solved by another layer of indirection.
+>
+> ~~...except for the problem of too many layers of indirection.~~"
+
+## Prologue
+
+前几天看到了 Shopify 那篇使用 js-bridge 让 webview 与 react-native 结合的开发 blog，学到了许多。正巧自己也做过此类技术栈的项目实践。因此在这里也总结一下自己的项目经验（~~流水账~~）。
+
+## 技术栈的选择
+
+在具体的技术实现之前，第一个要做的就是结合当前项目与实际需求，确定所选的技术栈。因此先简单聊聊为什么要选择这样的技术栈。
+
+### Why React Native?
+
+当时公司的业务需要去做一个 App 项目，优先支持 Android 平台，iOS 作为备选，因此面对有限的人力开发资源的情况下，跨端框架是最好的选择。当前市面上主流的跨端框架主要就只有两家：Flutter 与 React Native。
+
+Flutter 使用的是自己实现的一套渲染引擎，并且可以做到高度的 UI 体验一致性，这对于在用户中树立品牌印象更有帮助。但是抛开事实就是纸上谈兵，Flutter 使用的是 Dart 语言，并且有自己的一些 Widget 树特性，面对当前项目所给定的开发周期与当前前端团队主要使用的技术栈来说，简单的页面在 AI 的帮助下的确可以实现，但是如果开发过程中遇到了比较复杂的渲染问题，势必会对开发进度产生延误。这是我在做技术栈选型的时候不得不考虑的风险。
+
+相对的，React Native 使用的 TypeScript 就是当前团队开发时主要的编程语言，因此成为了我们的首选技术栈，React Native 会将 UI 组件编译成原生的 iOS 或者是 Android 组件，渲染方面基本不会有性能瓶颈。唯一需要担心的就是在处理复杂逻辑的时候， JavaScript 的执行效率相比一些原生的 Objective-C/Swift 或者是 Java/Kotlin 较慢，但是我们有足够的知识储备与信心去优化这方面的性能。即使到了真正的无法逾越的巨大瓶颈，我们也可以通过 React Native 所预留的原生模块桥接 `Native Modules` 来使用高效的原生开发语言实现好的逻辑。
+
+### Why Webview with JS Bridge?
+
+确定好主要技术栈，~~轰轰烈烈的应用大开发就开始了，~~ 我们就开始开发之旅了。在开发初期，我们 Webview 组件所承载的功能很简单：展示静态的网页，例如《用户协议》等。
+
+但是到了用户支付模块的时候，我们的开发进度将要遇到显著的卡点：因为之前的业务中，80% 以上支付场景都是移动端网页，因此支付页面中包含了大量支付方式的封装与业务逻辑。显然，在 App 中重新实现一套相同的逻辑不仅耗时耗力，而且可以肯定是重复的造轮子。于是我们决定直接复用之前的移动端网页的大部分逻辑，并将目光投向了 js-bridge 桥接 React Native 与 Webview
+
+## App 端的改造
+
+### 双向消息流
+
+一个健壮的 JS Bridge 需要解决两个基本方向的通信问题：Web 如何调用 App 的能力，以及 App 如何主动向 Web 推送消息。
+
+#### Web to Native：消息捕获
+
+在 React Native 中，`react-native-webview` 提供了 `onMessage` 接口。Web 端只需调用 `window.ReactNativeWebView.postMessage(data)`，Native 端就能即时捕获到这条信息。
+
+首先在 Web 环境注入一段初始化脚本，通过 [IIFE(立即执行函数)](https://developer.mozilla.org/en-US/docs/Glossary/IIFE) 的方式将桥接的脚本注入到 WebView 中：
+
+```JavaScript
+// 提前注入到 Web 环境的脚本
+;(function () {
+  if (window.__RN_WEBVIEW_BRIDGE__) return true // 防止重复注入
+  window.__RN_WEBVIEW_BRIDGE__ = true
+
+  window.postMessageToApp = function (message) {
+    var payload = typeof message === 'string' ? message : JSON.stringify(message)
+    window.ReactNativeWebView && window.ReactNativeWebView.postMessage(payload)
+  }
+})()
+```
+
+通过在 `WebView` 组件的 `injectedJavaScriptBeforeContentLoaded` 阶段注入，我们能保证 Web 业务逻辑在运行时，这座“桥”已经搭建完毕。
+
+#### Native to Web：代码注入
+
+App 对 Web 通信，最直接的方式是调用 `injectJavaScript`。这就像是在控制台直接输入并执行一段 JS 代码。为了规范化，我们约定 Web 端挂载一个 `onAppMessage` 的全局监听函数：
+
+```TypeScript
+const postMessageToWeb = (message: BridgeMessage) => {
+  const parsedMessage = JSON.stringify(message)
+  // 通过 injectJavaScript 执行 Web 端的全局函数
+  const script = `window.onAppMessage && window.onAppMessage('${parsedMessage}'); true;`
+  webViewRef.current?.injectJavaScript(script)
+}
+```
+
+### 通信协议设计：事件驱动
+
+既然上面已经定义好了双向通讯的桥梁，接下来为了 ~~（防止后续有人在代码里拉屎）~~ 保证今后代码的可读性与健壮性，我们来继续设计通信协议
+
+我们采用 **事件驱动（Event-Driven）** 的协议格式：
+
+```TypeScript
+// 基础 Message 接口
+interface BridgeMessage {
+  eventName: string // 事件名称
+  payload?: unknown // 携带的数据
+}
+```
+
+然后为了保证充分使用 TypeScript 的类型检查能力，**后续的每一个事件接口都必须预先定义好**，防止低级错误的出现：
+
+```TypeScript
+// 业务 Message 接口定义
+interface PurchaseMessage extends BridgeMessage {
+  eventName: 'perform_native_purchase'
+  payload: {
+    orderNo: string
+    timestamp: number
+    authToken: string
+    // ...
+  }
+}
+```
+
+## Web 端的兼容
+
+支付页面需要兼容并能够通过预先注入的通信方法向 App 发送消息。
+
+首先先在 `window.d.ts` 里面定义类型：
+
+```TypeScript
+export interface AppEnvWindow extends Window {
+  __RN_WEBVIEW_BRIDGE__: boolean
+  postMessageToApp: (arg: unkonwn) => void
+  onAppMessage: (arg: unkonwn) => void
+}
+```
+
+然后添加类型守卫函数，防止低级错误的出现：
+
+```TypeScript
+export function isAppEnv(windowObj: Window): windowObj is AppEnvWindow {
+  return (
+    typeof windowObj.__RN_WEBVIEW_BRIDGE__ === 'boolean' &&
+    windowObj.__RN_WEBVIEW_BRIDGE__ === true &&
+    typeof windowObj.postMessageToApp === 'function'
+  )
+}
+```
+
+自此，Web 端接下来只需要根据之前约定的类型进行规范的调用，就可以进行通信了。
+
+## 调用原生支付
+
+由于业务涉及到支付，并且 App 内支付也将作为一种支付方式向用户提供，我们将接入支付宝的支付 SDK，并将其作为 Native Module 封装给 React Native 使用，React Native 的由于改进了通信方式，不需要像以前一样将数据 JSON 序列化，而是直接使用 JavaScript 保持对 C++ 模块的引用，因此通讯的效率很高。
+
+### 封装支付模块
+
+支付宝仅提供了 [原生 APP 的支付 SDK](https://opendocs.alipay.com/open/54/104509)，第三方的一些封装又可能有潜在的安全风险。于是我们决定直接下载支付宝官方的 Demo 自己造轮子。
+
+首先需要在在 Gradle 里面引入支付宝 SDK。然后在 `android` 目录中对应的路径下
+
+创建 `AlipayModule.kt` ，并导入支付宝 SDK
+
+```Kotlin
+import com.alipay.sdk.app.PayTask
+```
+
+封装 `AlipayModule` 并使用 `@ReactMethod` 装饰器装饰类，以便能够正常被 React Native 识别到：
+
+```Kotlin
+@ReactModule(name = AlipayModule.NAME)
+class AlipayModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
+
+    companion object {
+        const val NAME: String = "AlipayModule"
+    }
+
+    override fun getName(): String = NAME
+}
+```
+
+接下来在类里面完善内部的参数传递与支付逻辑，并且方法需要使用 `@ReactMethod` 修饰：
+
+```Kotlin
+@ReactMethod
+fun pay(orderInfo: String, promise: Promise) {
+  	// 先拿到 Activity
+    val activity: Activity? = currentActivity
+    if (activity == null) {
+        promise.reject("E_NO_ACTIVITY", "当前没有可用的 Activity 上下文")
+        return
+    }
+
+    // 支付必须在非主线程执行，防止阻塞
+    Executors.newSingleThreadExecutor().execute {
+        try {
+          	// 新建支付
+            val payTask = PayTask(activity)
+          	// 得到结果
+            val result = payTask.payV2(orderInfo, true)
+            // 处理结果并返回
+            val resultStatus = result["resultStatus"] ?: ""
+            val memo = result["memo"] ?: ""
+            val resultStr = result["result"] ?: ""
+
+            val map = Arguments.createMap()
+            map.putString("resultStatus", resultStatus)
+            map.putString("memo", memo)
+            map.putString("result", resultStr)
+            map.putBoolean("success", resultStatus == "9000")
+
+            promise.resolve(map)
+        } catch (t: Throwable) {
+            promise.reject("E_ALIPAY_PAY", t)
+        }
+    }
+}
+```
+
+接下来，在 `AlipayModule.kt` 创建 `AlipayPackage.kt` 文件，将模块导出。重新启动开发环境，等待上述代码被编译成可执行的二进制文件，然后就可以美美在 React Native 中调用了：
+
+```TypeScript
+import { NativeModules, Platform } from 'react-native'
+// 解构并断言类型
+const { AlipayModule } = NativeModules as {
+  AlipayModule?: {
+    pay: (orderInfo: string) => Promise<{
+      resultStatus: string
+      memo: string
+      result: string
+      success: boolean
+    }>
+  }
+}
+function performAlipay(){
+	// ...其他业务逻辑
+	AlipayModule?.pay()
+	// ...其他业务逻辑
+}
+```
+
+### 处理支付流程
+
+一个完整的支付流如下：
+
+![payment_sequence.png](/static/images/bridging_native_and_webview_with_react_native/1.png)
+
+1.  **Web 触发**：Web 端发起支付意图，通过 `postMessageToApp` 发送订单信息。
+2.  **Native 执行**：App 接收到 `perform_purchase` 事件，调用原生支付 SDK。
+3.  **结果反馈**：支付完成后，App 通过 `postMessageToWeb` 告知 Web 支付状态（成功或失败）。
+
+在这种模式下，复杂的业务逻辑（如支付状态轮询、用户信息刷新）可以被 Native 封装，Web 只需要需关注 UI 交互。
+
+## 一致性与用户体验
+
+在实现 JS Bridge 时，还有一些细节：
+
+### Android 物理返回键
+
+在 Android 上，用户习惯点击物理返回键。如果不加干预，App 会直接退出 WebView 页面。理想的交互是：如果 Web 历史记录里有上一页，则先回退 Web 页面；如果已在 Web 首页，再执行 App 的路由返回。
+
+```TypeScript
+useEffect(() => {
+  const onBackPress = () => {
+    if (canGoBack) {
+      webViewRef.current?.goBack() // 优先 Web 回退
+      return true
+    }
+    router.back() // 其次 App 返回
+    return true
+  }
+  BackHandler.addEventListener('hardwareBackPress', onBackPress)
+  return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress)
+}, [canGoBack])
+```
+
+### 状态同步：自动登录
+
+当 Web 页面加载完成时，Native 端应主动推送当前的 `login_token` 与其他凭证，实现静默登录。
+
+## Epilogue
+
+### 近况
+
+最近也是从普通的代码打字员变成了需要为团队做决策的位置了。许多事情也发生了改变，更忙了，也更累了。导致大多数时间都想不起来自己还有这么个 blog，想起来也苦涩于没有什么合适的题材。整个业务中似乎到处都是琐事，但是每件琐事都似乎十分重要。
+
+### 杂谈
+
+由于 React Native 渲染的是原生组件，所以项目很容易就接入了 iOS26 的液态玻璃：
+
+![payment_sequence.png](/static/images/bridging_native_and_webview_with_react_native/2.gif)
+
+当项目接入的那一刻，感觉还是蛮有成就感的，就像看着自己的孩子成长一般。
+
+### Shopify 的混合客户端性能优化
+
+一开始我是想把 Shopify 的那篇 Blog 作为超链接放在上面的，但是后来怕读者全都跑完了（真有人会看吗？），所以改到了下面，这篇 Blog 更加详细地介绍了 Shopify 在 js-bridge 中性能优化方面做出的努力。
+
+### For Further Reading：
+
+[React Native WebView：在 JS 与 Native 间通信](https://github.com/react-native-webview/react-native-webview/blob/master/docs/Guide.md#communicating-between-js-and-native)
+
+[React Native: Turbo Native Modules](https://reactnative.dev/docs/turbo-native-modules-introduction)
+
+[Wikipedia: Event Driven Programming](https://en.wikipedia.org/wiki/Event-driven_programming)
+
+[Shopify: Mobilebridge Native Webviews](https://shopify.engineering/mobilebridge-native-webviews)
