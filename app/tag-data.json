@@ -2,13 +2,13 @@
   "react-native": 1,
   "javascript": 3,
   "typescript": 4,
-  "http": 3,
-  "network": 4,
-  "c-language": 1,
-  "linux": 2,
-  "操作系统": 1,
   "redux": 1,
+  "vue": 1,
+  "linux": 2,
+  "network": 4,
+  "操作系统": 1,
+  "http": 3,
   "regex": 1,
   "react": 1,
-  "vue": 1
+  "c-language": 1
 }
