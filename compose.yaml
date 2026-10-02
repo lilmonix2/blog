@@ -1,0 +1,33 @@
+services:
+  blog:
+    image: ${BLOG_IMAGE:-ixjs-blog:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        - env_local
+    container_name: ixjs-blog
+    env_file:
+      - path: .env.runtime
+        required: false
+    environment:
+      NODE_ENV: production
+    ports:
+      - '127.0.0.1:3000:3000'
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+secrets:
+  env_local:
+    file: .env.local

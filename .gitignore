@@ -45,3 +45,8 @@ yarn-error.log*
 
 # Contentlayer
 .contentlayer
+
+# deployment / generated state
+.env.deploy
+.env.runtime
+*.tsbuildinfo

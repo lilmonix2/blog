@@ -2,6 +2,7 @@
 
 import siteMetadata from '@/data/siteMetadata'
 import { useEffect, useState } from 'react'
+import { ArrowUp, MessageSquare } from 'lucide-react'
 
 const ScrollTopAndComment = () => {
   const [show, setShow] = useState(false)
@@ -12,47 +13,39 @@ const ScrollTopAndComment = () => {
       else setShow(false)
     }
 
-    window.addEventListener('scroll', handleWindowScroll)
+    handleWindowScroll()
+    window.addEventListener('scroll', handleWindowScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleWindowScroll)
   }, [])
 
   const handleScrollTop = () => {
-    window.scrollTo({ top: 0 })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const handleScrollToComment = () => {
-    document.getElementById('comment')?.scrollIntoView()
+    document.getElementById('comment')?.scrollIntoView({ behavior: 'smooth' })
   }
+
   return (
     <div
-      className={`fixed right-8 bottom-8 hidden flex-col gap-3 ${show ? 'md:flex' : 'md:hidden'}`}
+      className={`fixed right-5 bottom-6 z-40 flex-col gap-3 transition-opacity duration-200 ${
+        show ? 'flex' : 'pointer-events-none hidden'
+      }`}
     >
       {siteMetadata.comments?.provider && (
         <button
-          aria-label="Scroll To Comment"
+          aria-label="跳到评论"
           onClick={handleScrollToComment}
-          className="rounded-full bg-gray-200 p-2 text-gray-500 transition-all hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200/80 bg-white/80 text-gray-600 shadow-md backdrop-blur-md transition-all hover:bg-white hover:text-gray-900 hover:shadow-lg active:scale-95 dark:border-gray-700/80 dark:bg-gray-800/80 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
         >
-          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <MessageSquare className="h-5 w-5" aria-hidden="true" />
         </button>
       )}
       <button
-        aria-label="Scroll To Top"
+        aria-label="返回顶部"
         onClick={handleScrollTop}
-        className="rounded-full bg-gray-200 p-2 text-gray-500 transition-all hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200/80 bg-white/80 text-gray-600 shadow-md backdrop-blur-md transition-all hover:bg-white hover:text-gray-900 hover:shadow-lg active:scale-95 dark:border-gray-700/80 dark:bg-gray-800/80 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
       >
-        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path
-            fillRule="evenodd"
-            d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z"
-            clipRule="evenodd"
-          />
-        </svg>
+        <ArrowUp className="h-5 w-5" aria-hidden="true" />
       </button>
     </div>
   )

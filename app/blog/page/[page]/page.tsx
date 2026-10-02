@@ -1,42 +1,40 @@
 import ListLayout from '@/layouts/ListLayoutWithTags'
-import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
-import { allBlogs } from 'contentlayer/generated'
-import { notFound } from 'next/navigation'
+import { getPostSummaries, getTags, paginatePosts, parsePage } from '@/lib/content'
+import { notFound, permanentRedirect } from 'next/navigation'
+import { genPageMetadata } from 'app/seo'
 
-const POSTS_PER_PAGE = 5
+type Props = { params: Promise<{ page: string }> }
 
-export const generateStaticParams = async () => {
-  const totalPages = Math.ceil(allBlogs.length / POSTS_PER_PAGE)
-  const paths = Array.from({ length: totalPages }, (_, i) => ({ page: (i + 1).toString() }))
-
-  return paths
+function resolvePage(value: string) {
+  const page = parsePage(value)
+  const posts = getPostSummaries()
+  if (!page || page > paginatePosts(posts).totalPages) notFound()
+  return paginatePosts(posts, page)
 }
 
-export default async function Page(props: { params: Promise<{ page: string }> }) {
-  const params = await props.params
-  const posts = allCoreContent(sortPosts(allBlogs))
-  const pageNumber = parseInt(params.page as string)
-  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
+export async function generateMetadata({ params }: Props) {
+  const { currentPage } = resolvePage((await params).page)
+  return genPageMetadata({
+    title: `文章 · 第 ${currentPage} 页`,
+    path: `/blog/page/${currentPage}`,
+  })
+}
 
-  // Return 404 for invalid page numbers or empty pages
-  if (pageNumber <= 0 || pageNumber > totalPages || isNaN(pageNumber)) {
-    return notFound()
-  }
-  const initialDisplayPosts = posts.slice(
-    POSTS_PER_PAGE * (pageNumber - 1),
-    POSTS_PER_PAGE * pageNumber
-  )
-  const pagination = {
-    currentPage: pageNumber,
-    totalPages: totalPages,
-  }
+export function generateStaticParams() {
+  const { totalPages } = paginatePosts(getPostSummaries())
+  return Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => ({ page: String(i + 2) }))
+}
 
+export default async function Page({ params }: Props) {
+  const page = resolvePage((await params).page)
+  if (page.currentPage === 1) permanentRedirect('/blog')
   return (
     <ListLayout
-      posts={posts}
-      initialDisplayPosts={initialDisplayPosts}
-      pagination={pagination}
-      title="All Posts"
+      posts={page.posts}
+      tags={getTags()}
+      pagination={page}
+      basePath="/blog"
+      title="全部文章"
     />
   )
 }

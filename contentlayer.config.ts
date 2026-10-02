@@ -1,7 +1,8 @@
 import { defineDocumentType, ComputedFields, makeSource } from 'contentlayer2/source-files'
 import { writeFileSync } from 'fs'
 import readingTime from 'reading-time'
-import { slug } from 'github-slugger'
+import { publishedPosts } from './lib/content-core.mjs'
+import { existsSync } from 'fs'
 import path from 'path'
 import { fromHtmlIsomorphic } from 'hast-util-from-html-isomorphic'
 // Remark packages
@@ -23,11 +24,9 @@ import rehypeCitation from 'rehype-citation'
 import rehypePrismPlus from 'rehype-prism-plus'
 import rehypePresetMinify from 'rehype-preset-minify'
 import siteMetadata from './data/siteMetadata'
-import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer.js'
-import prettier from 'prettier'
+import type { Blog as BlogDocument, Authors as AuthorDocument } from 'contentlayer/generated'
 
 const root = process.cwd()
-const isProduction = process.env.NODE_ENV === 'production'
 
 // heroicon mini link
 const icon = fromHtmlIsomorphic(
@@ -59,38 +58,51 @@ const computedFields: ComputedFields = {
   toc: { type: 'json', resolve: (doc) => extractTocHeadings(doc.body.raw) },
 }
 
-/**
- * Count the occurrences of all tags across blog posts and write to json file
- */
-async function createTagCount(allBlogs) {
-  const tagCount: Record<string, number> = {}
-  allBlogs.forEach((file) => {
-    if (file.tags && (!isProduction || file.draft !== true)) {
-      file.tags.forEach((tag) => {
-        const formattedTag = slug(tag)
-        if (formattedTag in tagCount) {
-          tagCount[formattedTag] += 1
-        } else {
-          tagCount[formattedTag] = 1
-        }
-      })
-    }
-  })
-  const formatted = await prettier.format(JSON.stringify(tagCount, null, 2), { parser: 'json' })
-  writeFileSync('./app/tag-data.json', formatted)
+function createSearchIndex(allBlogs: BlogDocument[]) {
+  const entries = publishedPosts(allBlogs).map(
+    ({ title, path, slug, date, summary, tags, body }) => ({
+      title,
+      path,
+      slug,
+      date,
+      summary,
+      tags,
+      text: body.raw
+        .replace(/```[\s\S]*?```/g, (code) => code.replace(/```[^\n]*\n?/g, ''))
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/[#*`]/g, ''),
+    })
+  )
+  writeFileSync('public/search.json', JSON.stringify(entries))
 }
 
-function createSearchIndex(allBlogs) {
-  if (
-    siteMetadata?.search?.provider === 'kbar' &&
-    siteMetadata.search.kbarConfig.searchDocumentsPath
-  ) {
-    writeFileSync(
-      `public/${path.basename(siteMetadata.search.kbarConfig.searchDocumentsPath)}`,
-      JSON.stringify(allCoreContent(sortPosts(allBlogs)))
+function validateContent(posts: BlogDocument[], authors: AuthorDocument[]) {
+  const errors: string[] = []
+  for (const post of posts) {
+    const fail = (message: string) => errors.push(`${post.filePath}: ${message}`)
+    if (!post.draft && !post.summary?.trim()) fail('公开文章必须提供摘要')
+    if (post.layout && post.layout !== 'PostLayout') fail('未知文章布局')
+    for (const author of post.authors || ['default'])
+      if (!authors.some((entry) => entry.slug === author)) fail(`作者不存在: ${author}`)
+    if (!Number.isFinite(Date.parse(post.date))) fail('无效发布日期')
+    if (post.lastmod && Date.parse(post.lastmod) < Date.parse(post.date))
+      fail('更新日期早于发布日期')
+    if (post.canonicalUrl && !/^https?:\/\//.test(post.canonicalUrl))
+      fail('canonicalUrl 必须是绝对 HTTP(S) 地址')
+    if (
+      post.images &&
+      (!Array.isArray(post.images) || post.images.some((image) => typeof image !== 'string'))
     )
-    console.log('Local search index generated...')
+      fail('images 必须是字符串数组')
+    const images = [...post.body.raw.matchAll(/!\[[^\]]*\]\(([^)\s]+)(?:[^)]*)\)/g)].map(
+      (match) => match[1]
+    )
+    for (const image of [...images, ...(Array.isArray(post.images) ? post.images : [])]) {
+      if (image.startsWith('/') && !existsSync(path.join(root, 'public', image)))
+        fail(`图片不存在: ${image}`)
+    }
   }
+  if (errors.length) throw new Error(errors.join('\n'))
 }
 
 export const Blog = defineDocumentType(() => ({
@@ -106,7 +118,7 @@ export const Blog = defineDocumentType(() => ({
     summary: { type: 'string' },
     images: { type: 'json' },
     authors: { type: 'list', of: { type: 'string' } },
-    layout: { type: 'string' },
+    layout: { type: 'enum', options: ['PostLayout'], default: 'PostLayout' },
     bibliography: { type: 'string' },
     canonicalUrl: { type: 'string' },
   },
@@ -166,6 +178,7 @@ export default makeSource({
         rehypeAutolinkHeadings,
         {
           behavior: 'prepend',
+          properties: { ariaLabel: '跳到本节', className: ['heading-anchor'] },
           headingProperties: {
             className: ['content-header'],
           },
@@ -180,8 +193,8 @@ export default makeSource({
     ],
   },
   onSuccess: async (importData) => {
-    const { allBlogs } = await importData()
-    createTagCount(allBlogs)
+    const { allBlogs, allAuthors } = await importData()
+    validateContent(allBlogs, allAuthors)
     createSearchIndex(allBlogs)
   },
 })

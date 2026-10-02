@@ -20,7 +20,7 @@ summary: '在网络的早期，人们发送的文件大小仅为几 KB。到了�
 
 数据压缩即通过使用压缩算法减小传输数据的体积。来达到提升传输速度的目的。
 
-![](/static/images/how_http_transfer_large_files/img_1.png)
+![HTTP 数据压缩示意图](/static/images/how_http_transfer_large_files/img_1.png)
 
 为了压缩数据，我们需要使用一些压缩算法：在发送请求时，浏览器会附带一个 `Accept-Encoding` 头，其中包含支持的压缩算法列表，一些比较常见的压缩算法有： gzip（GZIP）、、deflate 和 br（Brotli）。服务器收到请求后会从列表中选择其中支持的算法，并在响应的 `Content-Encoding` 头中设置该算法的名称。一旦浏览器接收到响应，它就能够按照相应的算法解析响应体中的数据。
 
@@ -30,13 +30,13 @@ summary: '在网络的早期，人们发送的文件大小仅为几 KB。到了�
 
 ## 分块传输编码
 
-![](/static/images/how_http_transfer_large_files/img_2.png)
+![HTTP 分块传输示意图](/static/images/how_http_transfer_large_files/img_2.png)
 
 通常，HTTP 应答消息中发送的数据是整个发送的，`Content-Length` 消息头字段表示数据的长度。数据的长度很重要，因为客户端需要知道哪里是应答消息的结束，以及后续应答消息的开始。然而，在 HTTP 1.1 中，引入了分块传输来解决上述的问题。使用分块传输编码，数据分解成一系列数据块，并以一个或多个块发送，这样服务器可以发送数据而不需要预先知道发送内容的总大小。
 
 当服务器发送响应时，会添加一个头部 `Transfer-Encoding: chunked`，以通知浏览器数据是以分块形式传输的。
 
-![](/static/images/how_http_transfer_large_files/img_3.png)
+![分块响应的长度与内容结构](/static/images/how_http_transfer_large_files/img_3.png)
 
 分块传输的每个数据快由下面三部分组成：
 
@@ -45,7 +45,7 @@ summary: '在网络的早期，人们发送的文件大小仅为几 KB。到了�
 - 每个块末尾的 CRLF 分隔符
   （CRLF 指的是 `回车符 (Carriage Return，CR)` 和 `换行符 (Line Feed，LF)` 的组合。在 HTTP 的头部信息和分块传输中，CRLF通常用于分隔不同的部分。）
 
-![](/static/images/how_http_transfer_large_files/img_4.png)
+![分块响应结束标记](/static/images/how_http_transfer_large_files/img_4.png)
 
 服务器持续向浏览器传送分块数据，当到达数据流的末尾时，它会附加一个数据快作为结束标记，包括以下部分：
 
@@ -56,17 +56,17 @@ summary: '在网络的早期，人们发送的文件大小仅为几 KB。到了�
 
 综上，一个 HTTP 消息的 `Transfer-Encoding` 消息头的值为 `chunked`，那么，消息体由数量未定的块组成，并以最后一个大小为 0 的块为结束。
 
-![](/static/images/how_http_transfer_large_files/img_5.png)
+![完整分块传输响应示例](/static/images/how_http_transfer_large_files/img_5.png)
 
 ## 选择性数据请求
 
 分块传输编码对于传输一个大文件来说确实十分有用，但是对于一些网站的视频功能来说，没有必要一次性传输所有的数据块，因此，我们可以采用懒加载的方式，只请求加载部分需要的数据块。这不仅节省了服务端的带宽，同时也减少了本地浏览器存储的压力。
 
-![](/static/images/how_http_transfer_large_files/img_6.png)
+![视频播放与缓冲进度条](/static/images/how_http_transfer_large_files/img_6.png)
 
 打开任意一个视频网站（例如 bilibli.com），在播放进度条栏里面可以看到除了已经播放的部分，还有一个灰色的进度条，并且这个灰色的进度条也在随着我们视频的播放逐渐向前。当我们点击灰色区域的时候，视频将立即播放，而不用等待进度条的加载完成。这部分灰色的进度条就是浏览器已经请求成功的视频部分。
 
-![](/static/images/how_http_transfer_large_files/img_7.png)
+![HTTP 字节范围请求示意图](/static/images/how_http_transfer_large_files/img_7.png)
 
 对于范围请求，服务器可以在返回的资源里面添加响应头里面添加 `Accept-Ranges: bytes` ，以表示服务器接受字节范围请求，并可以根据客户端请求返回部分内容。
 
@@ -84,7 +84,7 @@ Range: bytes=0-199
 Range: bytes=200-399
 ```
 
-![](/static/images/how_http_transfer_large_files/img_8.png)
+![Range 请求与 Content-Range 响应](/static/images/how_http_transfer_large_files/img_8.png)
 
 服务器收到请求后，如果正确命中了请求段的数据，返回 HTTP 状态码 `206 Partal Content` 来表示返回了部分内容，请求头里面也会添加 `Content-Range` 用于标注返回内容的范围与总长，例如图片里所展示的 `Content-Range: bytes 200-399/1000` ，如果客户端所请求的区间未被命中或者超出了内容的范围，则返回 HTTP 状态码 `416 Range Not Satisfiable` 的错误。相应的，服务器也可以无视客户端请求的内容资源区间，返回所有内容并以 HTTP 状态码 200 作为响应。
 
@@ -108,20 +108,20 @@ Range: bytes=0-99, -100
 
 请求多段数据的时候，服务器响应的 body 又将会与之前所介绍的有些许不同：
 
-![](/static/images/how_http_transfer_large_files/img_9.png)
+![多段范围响应的边界和消息头](/static/images/how_http_transfer_large_files/img_9.png)
 
 - 一个以 `--` 起始、中间内容行如一个随机的字符串、并以 CRLF 分隔符为结尾的一个用于标注内容边界的 boundary 指示符；
 - 由 `Content-Type` 与 `Content-Range` 组成的两个 Header，展示相应数据块的属性，同样以 CRLF 分隔符结尾；
 - 一个单独的 CRLF，告诉客户端真正的数据即将到来；
 - 最终，其中的一部分数据块以依旧以一个 CRLF 分隔符作为结尾；
 
-![](/static/images/how_http_transfer_large_files/img_10.png)
+![多段范围响应结束边界](/static/images/how_http_transfer_large_files/img_10.png)
 
 当所有数据传输完毕后，服务器所响应的 body 会使用一个以 `--` 起始，以 `--` 与 CRLF 分隔符的 boundary 指示符作为结尾。当浏览器接收到结尾的 boundary 指示符时，就知道了请求的多段数据已经全部返回完毕。
 
 综上，当请求多段数据的时候，服务器的响应体看起来会像是这个样子：
 
-![](/static/images/how_http_transfer_large_files/img_11.png)
+![完整多段范围响应示例](/static/images/how_http_transfer_large_files/img_11.png)
 
 ## 尾声
 

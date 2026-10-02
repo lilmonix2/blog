@@ -1,59 +1,38 @@
-import { slug } from 'github-slugger'
-import { allCoreContent, sortPosts } from 'pliny/utils/contentlayer'
-import siteMetadata from '@/data/siteMetadata'
 import ListLayout from '@/layouts/ListLayoutWithTags'
-import { allBlogs } from 'contentlayer/generated'
-import tagData from 'app/tag-data.json'
+import { getTags, getPostSummaries, paginatePosts } from '@/lib/content'
 import { genPageMetadata } from 'app/seo'
-import { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 
-const POSTS_PER_PAGE = 5
+type Props = { params: Promise<{ tag: string }> }
 
-export async function generateMetadata(props: {
-  params: Promise<{ tag: string }>
-}): Promise<Metadata> {
-  const params = await props.params
-  const tag = decodeURI(params.tag)
+export async function generateMetadata({ params }: Props) {
+  const { tag: rawTag } = await params
+  const tag = decodeURI(rawTag)
+  const entry = getTags().find((item) => item.slug === tag)
+  if (!entry) notFound()
   return genPageMetadata({
-    title: tag,
-    description: `${siteMetadata.title} ${tag} tagged content`,
-    alternates: {
-      canonical: './',
-      types: {
-        'application/rss+xml': `${siteMetadata.siteUrl}/tags/${tag}/feed.xml`,
-      },
-    },
+    title: entry.name,
+    description: `${entry.name} 相关文章`,
+    path: `/tags/${tag}`,
   })
 }
 
-export const generateStaticParams = async () => {
-  const tagCounts = tagData as Record<string, number>
-  const tagKeys = Object.keys(tagCounts)
-  return tagKeys.map((tag) => ({
-    tag: encodeURI(tag),
-  }))
-}
+export const generateStaticParams = () => getTags().map(({ slug: tag }) => ({ tag }))
 
-export default async function TagPage(props: { params: Promise<{ tag: string }> }) {
-  const params = await props.params
-  const tag = decodeURI(params.tag)
-  const title = tag[0].toUpperCase() + tag.split(' ').join('-').slice(1)
-  const filteredPosts = allCoreContent(
-    sortPosts(allBlogs.filter((post) => post.tags && post.tags.map((t) => slug(t)).includes(tag)))
-  )
-  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE)
-  const initialDisplayPosts = filteredPosts.slice(0, POSTS_PER_PAGE)
-  const pagination = {
-    currentPage: 1,
-    totalPages: totalPages,
-  }
-
+export default async function TagPage({ params }: Props) {
+  const { tag: rawTag } = await params
+  const tag = decodeURI(rawTag)
+  const entry = getTags().find((item) => item.slug === tag)
+  if (!entry) notFound()
+  const page = paginatePosts(getPostSummaries(tag))
   return (
     <ListLayout
-      posts={filteredPosts}
-      initialDisplayPosts={initialDisplayPosts}
-      pagination={pagination}
-      title={title}
+      posts={page.posts}
+      tags={getTags()}
+      activeTag={tag}
+      pagination={page}
+      basePath={`/tags/${tag}`}
+      title={entry.name}
     />
   )
 }

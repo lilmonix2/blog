@@ -2,8 +2,8 @@
 
 /**
  * CSS Styles for code highlighting.
- * Feel free to customize token styles 
- * by copying from a prismjs compatible theme:
+ *
+ * Night Owl by Sarah Drasner — always dark, regardless of page theme.
  * https://github.com/PrismJS/prism-themes
  */
 
@@ -42,14 +42,7 @@
   content: attr(line);
 }
 
-/* Token styles */
-/**
- * MIT License
- * Copyright (c) 2018 Sarah Drasner
- * Sarah Drasner's[@sdras] Night Owl
- * Ported by Sara vieria [@SaraVieira]
- * Added by Souvik Mandal [@SimpleIndian]
- */
+/* Token styles — Night Owl */
 .token.comment,
 .token.prolog,
 .token.cdata {

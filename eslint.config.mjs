@@ -12,9 +12,9 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 })
 
-export default [
+const config = [
   {
-    ignores: [],
+    ignores: ['.next/**', '.contentlayer/**', 'node_modules/**', 'public/**', '.yarn/**'],
   },
   js.configs.recommended,
   ...compat.extends(
@@ -38,8 +38,8 @@ export default [
       },
 
       parser: tsParser,
-      ecmaVersion: 5,
-      sourceType: 'commonjs',
+      ecmaVersion: 'latest',
+      sourceType: 'module',
 
       parserOptions: {
         project: true,
@@ -60,11 +60,21 @@ export default [
         },
       ],
       'react/prop-types': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       'react/no-unescaped-entities': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-var-requires': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
     },
   },
+  {
+    files: ['next.config.js', 'data/siteMetadata.js'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  { files: ['**/*.mjs'], languageOptions: { parserOptions: { project: null } } },
 ]
+
+export default config

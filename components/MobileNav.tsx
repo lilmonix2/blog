@@ -1,108 +1,60 @@
 'use client'
 
-import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react'
-import { disableBodyScroll, enableBodyScroll, clearAllBodyScrollLocks } from 'body-scroll-lock'
-import { Fragment, useState, useEffect, useRef } from 'react'
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react'
+import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from './Link'
 import headerNavLinks from '@/data/headerNavLinks'
 
-const MobileNav = () => {
-  const [navShow, setNavShow] = useState(false)
-  const navRef = useRef(null)
-
-  const onToggleNav = () => {
-    setNavShow((status) => {
-      if (status) {
-        enableBodyScroll(navRef.current)
-      } else {
-        // Prevent scrolling
-        disableBodyScroll(navRef.current)
-      }
-      return !status
-    })
-  }
-
-  useEffect(() => {
-    return clearAllBodyScrollLocks
-  })
-
+export default function MobileNav() {
+  const [open, setOpen] = useState(false)
+  const pathname = usePathname()
   return (
     <>
-      <button aria-label="Toggle Menu" onClick={onToggleNav} className="sm:hidden">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="hover:text-primary-500 dark:hover:text-primary-400 h-8 w-8 text-gray-900 dark:text-gray-100"
-        >
-          <path
-            fillRule="evenodd"
-            d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-            clipRule="evenodd"
-          />
-        </svg>
+      <button
+        type="button"
+        aria-label="打开导航菜单"
+        aria-expanded={open}
+        aria-controls="mobile-navigation"
+        onClick={() => setOpen(true)}
+        className="flex h-11 w-11 items-center justify-center rounded-md text-2xl sm:hidden"
+      >
+        <span aria-hidden="true">☰</span>
       </button>
-      <Transition appear show={navShow} as={Fragment} unmount={false}>
-        <Dialog as="div" onClose={onToggleNav} unmount={false}>
-          <TransitionChild
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-            unmount={false}
-          >
-            <div className="fixed inset-0 z-60 bg-black/25" />
-          </TransitionChild>
-
-          <TransitionChild
-            as={Fragment}
-            enter="transition ease-in-out duration-300 transform"
-            enterFrom="translate-x-full opacity-0"
-            enterTo="translate-x-0 opacity-95"
-            leave="transition ease-in duration-200 transform"
-            leaveFrom="translate-x-0 opacity-95"
-            leaveTo="translate-x-full opacity-0"
-            unmount={false}
-          >
-            <DialogPanel className="fixed top-0 left-0 z-70 h-full w-full bg-white/95 duration-300 dark:bg-gray-950/98">
-              <nav
-                ref={navRef}
-                className="mt-8 flex h-full basis-0 flex-col items-start overflow-y-auto pt-2 pl-12 text-left"
+      <Dialog open={open} onClose={() => setOpen(false)} className="relative z-70">
+        <div className="fixed inset-0 bg-black/40" aria-hidden="true" />
+        <DialogPanel className="fixed inset-y-0 right-0 w-full max-w-sm overflow-y-auto bg-white p-6 dark:bg-gray-950">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-semibold">网站导航</DialogTitle>
+            <button
+              type="button"
+              aria-label="关闭导航菜单"
+              className="min-h-11 rounded-md px-3"
+              onClick={() => setOpen(false)}
+            >
+              关闭
+            </button>
+          </div>
+          <nav id="mobile-navigation" aria-label="手机导航" className="mt-8 space-y-3">
+            {headerNavLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={
+                  pathname === link.href ||
+                  (link.href !== '/' && pathname.startsWith(`${link.href}/`))
+                    ? 'page'
+                    : undefined
+                }
+                onClick={() => setOpen(false)}
+                className="block rounded-md px-3 py-3 text-xl font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                {headerNavLinks.map((link) => (
-                  <Link
-                    key={link.title}
-                    href={link.href}
-                    className="hover:text-primary-500 dark:hover:text-primary-400 mb-4 py-2 pr-4 text-2xl font-bold tracking-widest text-gray-900 outline outline-0 dark:text-gray-100"
-                    onClick={onToggleNav}
-                  >
-                    {link.title}
-                  </Link>
-                ))}
-              </nav>
-
-              <button
-                className="hover:text-primary-500 dark:hover:text-primary-400 fixed top-7 right-4 z-80 h-16 w-16 p-4 text-gray-900 dark:text-gray-100"
-                aria-label="Toggle Menu"
-                onClick={onToggleNav}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </DialogPanel>
-          </TransitionChild>
-        </Dialog>
-      </Transition>
+                {link.title}
+              </Link>
+            ))}
+          </nav>
+        </DialogPanel>
+      </Dialog>
     </>
   )
 }
-
-export default MobileNav

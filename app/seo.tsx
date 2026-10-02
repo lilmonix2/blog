@@ -1,32 +1,48 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import siteMetadata from '@/data/siteMetadata'
+import { assetPath } from '@/lib/assets'
 
-interface PageSEOProps {
+type PageSEOProps = Omit<Metadata, 'title' | 'description'> & {
   title: string
   description?: string
   image?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  path?: string
 }
 
-export function genPageMetadata({ title, description, image, ...rest }: PageSEOProps): Metadata {
+export function siteUrl(path: string): string {
+  return new URL(String(assetPath(path)), `${siteMetadata.siteUrl}/`).toString()
+}
+
+export function genPageMetadata({
+  title,
+  description = siteMetadata.description,
+  image = siteMetadata.socialBanner,
+  path = '/',
+  ...rest
+}: PageSEOProps): Metadata {
+  const url = siteUrl(path)
+  const images = [siteUrl(image)]
   return {
     title,
-    description: description || siteMetadata.description,
+    description,
+    alternates: {
+      canonical: url,
+      types: {
+        'application/rss+xml': siteUrl(
+          path.startsWith('/tags/') ? `${path.split('/page/')[0]}/feed.xml` : '/feed.xml'
+        ),
+      },
+    },
     openGraph: {
-      title: `${title} | ${siteMetadata.title}`,
-      description: description || siteMetadata.description,
-      url: './',
+      title,
+      description,
+      url,
       siteName: siteMetadata.title,
-      images: image ? [image] : [siteMetadata.socialBanner],
-      locale: 'en_US',
+      images,
+      locale: 'zh_CN',
       type: 'website',
     },
-    twitter: {
-      title: `${title} | ${siteMetadata.title}`,
-      card: 'summary_large_image',
-      images: image ? [image] : [siteMetadata.socialBanner],
-    },
+    twitter: { title, description, card: 'summary_large_image', images },
     ...rest,
   }
 }

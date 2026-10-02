@@ -1,14 +1,17 @@
 {
-  "name": "",
-  "short_name": "",
+  "name": "lilmonix2's Blog",
+  "short_name": "ixjs",
   "icons": [
     {
-      "src": "/android-chrome-96x96.png",
+      "src": "android-chrome-96x96.png",
       "sizes": "96x96",
       "type": "image/png"
     }
   ],
   "theme_color": "#000000",
   "background_color": "#000000",
-  "display": "standalone"
+  "display": "standalone",
+  "start_url": "../../..",
+  "scope": "../../..",
+  "lang": "zh-CN"
 }
