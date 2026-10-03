@@ -53,7 +53,7 @@ export default function TableOfContents({
             onClick={() => {
               if (details.current) details.current.open = false
             }}
-            className={`block rounded-lg py-1.5 pr-2.5 text-sm transition-colors ${
+            className={`flex min-h-11 items-center rounded-lg py-2 pr-2.5 text-sm transition-colors ${
               isActive
                 ? 'bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300 font-medium'
                 : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200'
@@ -70,16 +70,16 @@ export default function TableOfContents({
     return (
       <details
         ref={details}
-        className="my-5 rounded-xl border border-gray-200/80 p-4 xl:hidden dark:border-gray-800"
+        className="my-4 rounded-xl border border-gray-200/80 px-4 py-1 xl:hidden dark:border-gray-800"
       >
-        <summary className="cursor-pointer text-sm font-bold text-gray-900 dark:text-gray-100">
+        <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-gray-900 dark:text-gray-100">
           文章目录
         </summary>
         <div className="pt-4">{links}</div>
       </details>
     )
   return (
-    <div className="hidden max-h-[calc(100dvh-8rem)] overflow-y-auto xl:block">
+    <div className="hidden max-h-[60dvh] overflow-y-auto xl:block">
       <h2 className="mb-3 text-base font-bold text-gray-900 dark:text-gray-100">文章目录</h2>
       {links}
     </div>

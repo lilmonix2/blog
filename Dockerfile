@@ -3,19 +3,17 @@
 FROM node:22-bookworm-slim AS dependencies
 WORKDIR /app
 
-COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn/releases ./.yarn/releases
-RUN yarn install --immutable
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci
 
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/.yarn ./.yarn
-COPY --from=dependencies /app/.yarnrc.yml /app/package.json /app/yarn.lock ./
+COPY --from=dependencies /app/package.json /app/package-lock.json /app/.npmrc ./
 COPY . .
-RUN --mount=type=secret,id=env_local,target=/app/.env.local,required=false yarn check
+RUN --mount=type=secret,id=env_local,target=/app/.env.local,required=false npm run check
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app

@@ -9,10 +9,8 @@ export default function Page() {
   const tags = getTags()
   return (
     <div className="divide-y divide-gray-200 dark:divide-gray-800">
-      <div className="space-y-2 pt-6 pb-8 md:space-y-4">
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl md:text-5xl dark:text-gray-100">
-          标签分类
-        </h1>
+      <div className="space-y-3 pt-6 pb-6">
+        <h1 className="page-heading">标签分类</h1>
         <p className="text-base text-gray-500 dark:text-gray-400">
           共收录 {tags.length} 个主题标签，点击标签快速筛选相关文章。
         </p>
@@ -23,7 +21,7 @@ export default function Page() {
             <li key={tag.slug}>
               <Link
                 href={`/tags/${tag.slug}`}
-                className="group hover:border-primary-500/50 hover:bg-primary-50/40 hover:text-primary-600 dark:hover:border-primary-400/50 dark:hover:bg-primary-950/40 dark:hover:text-primary-400 inline-flex items-center gap-2 rounded-full border border-gray-200/80 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-2xs transition-all hover:shadow-xs active:scale-95 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300"
+                className="group hover:border-primary-500/50 hover:bg-primary-50/40 hover:text-primary-600 dark:hover:border-primary-400/50 dark:hover:bg-primary-950/40 dark:hover:text-primary-400 inline-flex min-h-11 items-center gap-2 rounded-full border border-gray-200/80 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-2xs transition-all hover:shadow-xs active:scale-95 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300"
               >
                 <TagIcon className="group-hover:text-primary-500 dark:group-hover:text-primary-400 h-3.5 w-3.5 text-gray-400 transition-colors" />
                 <span>{tag.name}</span>

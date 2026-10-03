@@ -46,7 +46,7 @@
 .token.comment,
 .token.prolog,
 .token.cdata {
-  color: rgb(99, 119, 119);
+  color: rgb(156, 163, 175);
   font-style: italic;
 }
 
@@ -59,7 +59,7 @@
 }
 
 .token.deleted {
-  color: rgba(239, 83, 80, 0.56);
+  color: rgb(252, 165, 165);
   font-style: italic;
 }
 

@@ -11,19 +11,18 @@
     'Microsoft YaHei', 'Segoe UI', Roboto, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
     'Segoe UI Symbol', 'Noto Color Emoji';
 
-  /* Colors */
-  /* Copied from https://tailwindcss.com/docs/theme#default-theme-variable-reference */
-  --color-primary-50: oklch(0.95 0.08 245);
-  --color-primary-100: oklch(0.9 0.14 243);
-  --color-primary-200: oklch(0.8 0.2 242);
-  --color-primary-300: oklch(0.7 0.24 241);
-  --color-primary-400: oklch(0.58 0.26 240);
+  /* A single blue family keeps links, tags and selected states consistent. */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
   --color-primary-500: #1d4ed8;
-  --color-primary-600: oklch(0.4 0.26 239);
-  --color-primary-700: oklch(0.35 0.24 238);
-  --color-primary-800: oklch(0.3 0.22 237);
-  --color-primary-900: oklch(0.25 0.2 236);
-  --color-primary-950: oklch(0.18 0.16 235);
+  --color-primary-600: #1e40af;
+  --color-primary-700: #1e3a8a;
+  --color-primary-800: #1e3569;
+  --color-primary-900: #172554;
+  --color-primary-950: #101d3a;
 
   --color-gray-50: oklch(0.985 0.002 247.839);
   --color-gray-100: oklch(0.967 0.003 264.542);
@@ -74,6 +73,7 @@
   a:focus-visible,
   button:focus-visible {
     outline: 2px solid;
+    outline-offset: 3px;
     border-radius: var(--radius-sm);
     outline-color: var(--color-primary-500);
   }
@@ -98,7 +98,7 @@
       font-weight: 600;
     }
     & :where(code):not(pre code) {
-      color: var(--color-indigo-500);
+      color: var(--color-primary-700);
     }
   }
 
@@ -190,7 +190,8 @@ input:-webkit-autofill:focus {
 @layer utilities {
   .dark .text-primary-500,
   .dark .prose a,
-  .dark .prose a code {
+  .dark .prose a code,
+  .dark .prose :where(code):not(pre code) {
     color: #93c5fd;
   }
   .dark .prose a:hover {
@@ -215,4 +216,20 @@ input:-webkit-autofill:focus {
 /* The accessible close button in the library toolbar replaces its unlabeled SVG. */
 .article-photo-viewer .PhotoView-Slider__BannerRight > .PhotoView-Slider__toolbarIcon {
   display: none;
+}
+
+@layer components {
+  .page-heading {
+    @apply text-3xl leading-tight font-bold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl dark:text-gray-100;
+  }
+}
+@layer utilities {
+  .reading-prose {
+    width: 100%;
+    max-width: 46rem;
+    margin-inline: auto;
+    font-size: 1.0625rem;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+  }
 }

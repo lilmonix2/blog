@@ -39,9 +39,10 @@ for (let page = 1; page <= paginatePosts(posts).totalPages; page++) {
   )
   const main = html.match(/<main[^>]*>([\s\S]*?)<\/main>/)?.[1] || ''
   pages.push(
-    ...[...main.matchAll(/<h2[^>]*><a[^>]*href="([^"]+)"/g)].map(
-      (match) => match[1].split('/blog/')[1]
-    )
+    ...[...main.matchAll(/<article\b[^>]*>([\s\S]*?)<\/article>/g)].flatMap((article) => {
+      const href = article[1].match(/<a\b[^>]*href="(\/blog\/[^"#?]+)"/)?.[1]
+      return href ? [href.split('/blog/')[1]] : []
+    })
   )
 }
 assert.deepEqual(

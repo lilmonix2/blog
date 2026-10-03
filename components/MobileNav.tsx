@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from './Link'
 import headerNavLinks from '@/data/headerNavLinks'
+import { Check, Menu } from 'lucide-react'
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false)
@@ -17,9 +18,9 @@ export default function MobileNav() {
         aria-expanded={open}
         aria-controls="mobile-navigation"
         onClick={() => setOpen(true)}
-        className="flex h-11 w-11 items-center justify-center rounded-md text-2xl sm:hidden"
+        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 sm:hidden dark:text-gray-400 dark:hover:bg-gray-800"
       >
-        <span aria-hidden="true">☰</span>
+        <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
       <Dialog open={open} onClose={() => setOpen(false)} className="relative z-70">
         <div className="fixed inset-0 bg-black/40" aria-hidden="true" />
@@ -47,9 +48,13 @@ export default function MobileNav() {
                     : undefined
                 }
                 onClick={() => setOpen(false)}
-                className="block rounded-md px-3 py-3 text-xl font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="aria-[current=page]:bg-primary-50 aria-[current=page]:text-primary-700 dark:aria-[current=page]:bg-primary-950 dark:aria-[current=page]:text-primary-200 flex min-h-11 items-center justify-between rounded-lg px-3 py-3 text-lg font-medium transition-colors hover:bg-gray-100 aria-[current=page]:font-semibold dark:hover:bg-gray-800"
               >
                 {link.title}
+                {(pathname === link.href ||
+                  (link.href !== '/' && pathname.startsWith(`${link.href}/`))) && (
+                  <Check className="h-5 w-5" aria-hidden="true" />
+                )}
               </Link>
             ))}
           </nav>

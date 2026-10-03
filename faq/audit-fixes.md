@@ -1,6 +1,6 @@
 # 架构与阅读体验整改记录
 
-日期：2026-10-03。按原审计的 24 项问题完成仓库内修改，保留并完善已有 Docker 部署方向。线上 Nginx 配置及 Cloudflare 缓存尚未修改；部署前请执行 [原图 404 修复步骤](./deploy-with-docker.md#修复点击大图时原图-404)。
+日期：2026-10-03。按原审计的 24 项问题完成仓库内修改，保留并完善 Docker 部署方向。源站已切换至 `81.70.213.236`；Nginx 图片路由修复记录见下文。
 
 | 原问题 | 实施结果 |
 | --- | --- |
@@ -15,7 +15,7 @@
 | 9. 阅读宽度 | 去除正文重复容器；文章列表在 lg 才分栏，小屏标签流式排列；修复手机页脚换行。 |
 | 10. 全文搜索 | 搜索标题、摘要、标签和正文，按需加载小型索引；增加加载、无结果、失败、超时和重试提示。 |
 | 11. 键盘入口 | 原生按钮打开图片、复制代码；大图有名称、缩放、前后图片、Esc 退出及焦点恢复，重复图片按实例定位；图片补充响应式 sizes 和 23 个空 alt。 |
-| 12. 导航与语义 | 中文导航和交互文案，当前页面高亮，首页 H1，正文跳过链接，44px 主要触控入口，主题选项选择后关闭菜单；修复 manifest 图标地址并展示 RSS 订阅。 |
+| 12. 导航与语义 | 中文导航和交互文案，当前页面高亮，首页 H1，正文跳过链接，44px 主要触控入口，主题选项选择后关闭菜单；修复 manifest 图标地址；按要求暂时隐藏 RSS 入口，保留 feed 文件生成。 |
 | 13. 评论状态 | 按需加载 Giscus；中文状态、失败重试、15 秒超时、主题同步和 GitHub 讨论入口；区分无评论与真正服务错误。 |
 | 14. 内容查询 | lib/content-core.mjs 共享纯规则，lib/content.ts 提供路由查询；始终过滤草稿、复制后排序、保留标签展示名称。 |
 | 15. 客户端边界 | 列表与分页改为服务端组件，只传列表需要字段；图片上下文仅存在于文章；演示与评论延迟加载，PhotoProvider 保留 react-photo-view 并仅作用于文章，删除全局 KBar provider。 |
@@ -31,17 +31,17 @@
 
 ## 额外报告的原图 404
 
-真实 Chrome 中确认：Vue 文章缩略图正常，大图对应 `/static/images/the_type_of_reactive_variables_in_vue/img_2.png` 失败。该地址的响应为 Nginx 404，并由 Cloudflare 以 HIT 缓存，max-age=14400。仓库原图确实存在。当前未取得源站 Nginx 配置，因此不能将具体原因断言为某一条 location。
+真实 Chrome 中确认：Vue 文章缩略图正常，大图对应 `/static/images/the_type_of_reactive_variables_in_vue/img_2.png` 失败。源站配置的 `location ^~ /static/` 将请求映射至旧目录 `/home/wwwroot/blog/public/static/`，而该文件不存在；当前 Docker 容器中的原图则返回 200。
 
-已准备 [Nginx 静态资源转发片段](../deploy/nginx-blog.locations.conf)、Docker 原图复制与原图 HTTP 验收。按用户要求恢复 react-photo-view，保留库的拖动、触控和画廊功能，并将 src 设置为质量 100 的优化端点，避免主动请求已知会被旧代理阻断的原图。
+已备份源站 Nginx 配置，将 `/static/` 与扩展名静态文件路由转发至 `127.0.0.1:3000`，`nginx -t` 通过并重载。源站原图及公开 `https://ixjs.com/static/images/the_type_of_reactive_variables_in_vue/img_2.png` 均返回 200。按要求保留 react-photo-view、拖动、触控和画廊功能，并将大图设为质量 100 的优化端点。
 
 ## 验证与边界
 
-- yarn check 通过：无修改 lint、7 个测试、生产构建、严格类型检查和实际 HTML 检查。
+- npm run check 通过：无修改 lint、7 个测试、生产构建、严格类型检查和实际 HTML 检查。
 - 本地 standalone HTTP 冒烟通过：页面、搜索、RSS、sitemap、原图和未知路由。
 - 已在 390px 浏览器验证手机菜单、目录收起与锚点位置、搜索 netstat 命中正文、复制结果、主题菜单关闭、图片键盘打开/切换/Esc/焦点恢复。
 - 临时反向代理模拟原图 404，优化端点可以加载大图；模拟搜索 503，显示失败和重试入口。
 - YAML 解析、Bash 语法检查与 git diff --check 通过；回滚测试使用 mock Docker 验证失败路径。
-- 本机没有 Docker，未实测容器构建与远端发布；本机构建使用 Node 23，CI/Docker 固定 Node 22。未发送评论、登录第三方或部署线上变更。
-- 保留 Pliny 工具依赖，Yarn 仍提示其部分旧依赖的 React peer 范围。已有生产构建及交互测试通过；这些提示没有通过虚假扩大 peer 范围来隐藏。
+- Docker Desktop 已在本机启动；部署使用本机构建的 `linux/amd64` 镜像归档上传至 `81.70.213.236`。容器健康检查和服务内部 HTTP 验收通过。关于页头像区的社交图标已按要求改为 Twitter 标志；本次更新未访问公开域名进行验收。
+- 保留 Pliny 工具依赖；其部分旧依赖仍只声明 React 18 peer 范围，因此 npm 使用项目级兼容安装设置。已有生产构建及交互测试通过，未修改第三方包声明来隐藏差异。
 - 构建报告首页 First Load JS 约 106kB、文章约 126kB；新增无障碍与交互能力有体积成本，尚无真实用户 LCP/INP 测量，不能宣称所有性能指标提升。

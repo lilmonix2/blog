@@ -14,8 +14,10 @@ export default function SearchButton() {
   const [posts, setPosts] = useState<SearchPost[] | null>(null)
   const [error, setError] = useState(false)
   const [retry, setRetry] = useState(0)
+  const [shortcutLabel, setShortcutLabel] = useState('Ctrl K')
   const input = useRef<HTMLInputElement>(null)
   useEffect(() => {
+    setShortcutLabel(/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K')
     const shortcut = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -75,12 +77,21 @@ export default function SearchButton() {
     <>
       <button
         type="button"
-        className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900 active:scale-95 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+        className="flex h-11 w-11 items-center justify-center gap-2 rounded-lg text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200 lg:w-auto lg:px-3 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100 dark:active:bg-gray-700"
         aria-label="搜索文章"
         aria-keyshortcuts="Control+k Meta+k"
         onClick={() => setOpen(true)}
       >
         <Search className="h-5 w-5" aria-hidden="true" />
+        <span className="hidden text-sm lg:inline" aria-hidden="true">
+          搜索
+        </span>
+        <kbd
+          className="hidden rounded border border-gray-200 px-1.5 py-0.5 text-xs lg:inline dark:border-gray-700"
+          aria-hidden="true"
+        >
+          {shortcutLabel}
+        </kbd>
       </button>
       <Dialog open={open} onClose={close} initialFocus={input} className="relative z-70">
         <div
@@ -95,7 +106,7 @@ export default function SearchButton() {
               </DialogTitle>
               <button
                 type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 active:scale-95 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 active:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
                 onClick={close}
                 aria-label="关闭搜索"
               >
@@ -117,7 +128,7 @@ export default function SearchButton() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索标题、标签或正文…"
-                className="focus:border-primary-500 focus:ring-primary-500/20 dark:focus:border-primary-400 w-full rounded-xl border border-gray-300 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm transition-all focus:bg-white focus:ring-2 dark:border-gray-700 dark:bg-gray-800/50 dark:focus:bg-gray-900"
+                className="focus:border-primary-500 focus:ring-primary-500/20 dark:focus:border-primary-400 min-h-11 w-full rounded-lg border border-gray-300 bg-gray-50/50 py-2.5 pr-4 pl-10 text-base transition-colors focus:bg-white focus:ring-2 dark:border-gray-700 dark:bg-gray-800/50 dark:focus:bg-gray-900"
               />
             </div>
             <div role="status" className="py-3 text-sm text-gray-500 dark:text-gray-400">
@@ -131,13 +142,31 @@ export default function SearchButton() {
             </div>
             {error && (
               <button
-                className="bg-primary-600 hover:bg-primary-700 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+                className="bg-primary-600 hover:bg-primary-700 min-h-11 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
                 onClick={() => setRetry((value) => value + 1)}
               >
                 重试
               </button>
             )}
-            <ul className="max-h-[55dvh] overflow-y-auto">
+            {!error && posts && terms.length > 0 && results.length === 0 && (
+              <div className="rounded-xl bg-gray-50 px-4 py-6 text-center dark:bg-gray-800/50">
+                <p className="font-medium text-gray-900 dark:text-gray-100">没有找到相关文章</p>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  试试更短的关键词，或搜索 React、HTTP 等主题标签。
+                </p>
+                <button
+                  type="button"
+                  className="text-primary-500 mt-3 min-h-11 rounded-lg px-4 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800"
+                  onClick={() => {
+                    setQuery('')
+                    input.current?.focus()
+                  }}
+                >
+                  清空关键词
+                </button>
+              </div>
+            )}
+            <ul className="max-h-[55dvh] space-y-1 overflow-y-auto">
               {!error &&
                 results.slice(0, 30).map((post) => (
                   <li key={post.path}>
@@ -147,7 +176,7 @@ export default function SearchButton() {
                       className="block rounded-lg p-3 hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-800 dark:focus-visible:bg-gray-800"
                     >
                       <span className="font-semibold">{post.title}</span>
-                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600 dark:text-gray-400">
                         {post.summary}
                       </p>
                     </Link>

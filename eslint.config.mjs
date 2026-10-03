@@ -14,7 +14,7 @@ const compat = new FlatCompat({
 
 const config = [
   {
-    ignores: ['.next/**', '.contentlayer/**', 'node_modules/**', 'public/**', '.yarn/**'],
+    ignores: ['.next/**', '.contentlayer/**', 'node_modules/**', 'public/**'],
   },
   js.configs.recommended,
   ...compat.extends(

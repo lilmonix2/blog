@@ -39,13 +39,13 @@ export default function CodeBlock({ children, ...props }: ComponentPropsWithoutR
   const lang = getLanguage(children)
 
   return (
-    <div className="group relative my-6 overflow-hidden rounded-md bg-gray-800 shadow-md">
+    <div className="group relative my-6 overflow-hidden rounded-xl border border-gray-700 bg-gray-800">
       {/* Header bar */}
-      <div className="not-prose flex items-center justify-between border-b border-gray-700/50 px-4 py-2 text-xs text-gray-400">
+      <div className="not-prose flex min-h-12 items-center justify-between border-b border-gray-700 px-4 text-xs text-gray-300">
         <span className="font-mono select-none">{lang || 'code'}</span>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-gray-700 hover:text-gray-200"
+          className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-3 transition-colors hover:bg-gray-700 hover:text-white active:bg-gray-600"
           onClick={copy}
           aria-label="复制代码"
         >

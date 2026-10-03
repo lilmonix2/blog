@@ -2,7 +2,7 @@ import { cp, mkdir, access } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 
 await access('.next/standalone/server.js').catch(() => {
-  throw new Error('请先执行 yarn build 生成生产版本。')
+  throw new Error('请先执行 npm run build 生成生产版本。')
 })
 await mkdir('.next/standalone/.next', { recursive: true })
 await cp('.next/static', '.next/standalone/.next/static', { recursive: true })

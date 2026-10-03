@@ -20,9 +20,9 @@ fi
 command -v docker >/dev/null || { echo '错误: 本机未安装 Docker' >&2; exit 1; }
 archive="$(mktemp -t ixjs-blog-image.XXXXXX)"
 trap 'rm -f "$archive"' EXIT
-build_args=(--platform linux/amd64 --tag "$IMAGE_NAME")
+build_args=(--platform linux/amd64 --tag "$IMAGE_NAME" --load)
 if [[ -f .env.local ]]; then build_args+=(--secret id=env_local,src=.env.local); fi
-docker build "${build_args[@]}" .
+docker buildx build "${build_args[@]}" .
 docker save "$IMAGE_NAME" | gzip > "$archive"
 remote="$SERVER_USER@$SERVER_HOST"
 ssh -p "$SERVER_PORT" "$remote" "mkdir -p '$SERVER_DIR'"

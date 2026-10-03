@@ -36,7 +36,7 @@ export default function ThemeSwitch() {
                 type="button"
                 aria-pressed={isSelected}
                 onClick={() => setTheme(option.value)}
-                className={`flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm transition-colors ${
+                className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm transition-colors ${
                   isSelected
                     ? 'text-primary-600 dark:text-primary-400 font-medium'
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
