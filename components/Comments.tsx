@@ -82,7 +82,7 @@ export default function Comments({ slug }: { slug: string }) {
           </button>
           <p>
             <a
-              className="text-blue-700 dark:text-blue-300"
+              className="text-primary-500 dark:text-primary-400"
               href={`${siteMetadata.siteRepo}/discussions`}
               target="_blank"
               rel="noopener noreferrer"

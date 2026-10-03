@@ -13,7 +13,7 @@ export default function NotFound() {
         <p className="mb-8">你可以返回首页，或使用搜索查找文章。</p>
         <Link
           href="/"
-          className="focus:shadow-outline-blue inline rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm leading-5 font-medium text-white shadow-xs transition-colors duration-150 hover:bg-blue-700 dark:hover:bg-blue-500"
+          className="bg-primary-600 hover:bg-primary-700 dark:hover:bg-primary-500 inline rounded-lg border border-transparent px-4 py-2 text-sm leading-5 font-medium text-white shadow-xs transition-colors duration-150"
         >
           返回首页
         </Link>
