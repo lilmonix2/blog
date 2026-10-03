@@ -29,7 +29,7 @@ npm run deploy
 
 ## 维护与验证
 
-推荐 Node 22（`.nvmrc`）。首次安装使用 `npm ci`，`npm run dev` 开发，`npm run build` 构建，`npm start` / `npm run serve` 启动 standalone 生产预览，`PORT=3030 npm run serve` 指定端口。完整检查使用 `npm run check`，包含无修改 lint、分页/RSS 单元检查、生产构建、生成 HTML 校验和严格类型检查。`npm run lint:fix` 才会自动修改文件。
+推荐 Node 26（`.nvmrc`）。首次安装使用 `npm ci`，`npm run dev` 开发，`npm run build` 构建，`npm start` / `npm run serve` 启动 standalone 生产预览，`PORT=3030 npm run serve` 指定端口。完整检查使用 `npm run check`，包含无修改 lint、分页/RSS 单元检查、生产构建、生成 HTML 校验和严格类型检查。`npm run lint:fix` 才会自动修改文件。
 
 内容放在 `data/blog/*.mdx`，公开文章需要 title、ISO 日期、summary，tags 为字符串列表；draft 为 true 的文章不进入页面、RSS、搜索或 sitemap。作者引用必须存在，图片的站内路径必须在 `public/` 存在。layout 仅支持当前的 PostLayout。修改正文图片时请提供可理解的 alt 文本。搜索索引与 RSS 在构建时生成，标签直接从公开内容查询，无需手动更新 JSON。
 

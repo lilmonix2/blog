@@ -25,7 +25,7 @@
 | 19. 类型和内容 | 开启 strict；布局枚举、公开摘要、作者引用、图片数组、图片存在性、日期和 canonical 校验。站点配置保留 JS 供 Node RSS 直接读取，以 @ts-check、satisfies 和 SiteConfig 类型约束。 |
 | 20. 模板清理 | 删除未启用的 newsletter API、表单、旧列表/文章布局、重复 LayoutWrapper，以及未使用的 Algolia CSS、重复滚动锁依赖。 |
 | 21. CSP 与 JSON-LD | 生产去除 unsafe-eval；限制 connect-src，补充 base-uri/object-src/frame-ancestors；JSON-LD 克隆后输出并转义 <。静态 Next 内联脚本仍需要 unsafe-inline。 |
-| 22. 启动和部署 | deploy 显式用 Bash；Compose 接受统一镜像参数；dev 和 standalone start/serve 分开；Node 22 版本文件。 |
+| 22. 启动和部署 | deploy 显式用 Bash；Compose 接受统一镜像参数；dev 和 standalone start/serve 分开；Node 26 版本文件。 |
 | 23. 健康与回滚 | SHA 镜像、串行发布，等待健康检查，HTTP 和原图验收，失败恢复旧镜像；分离公开构建配置、SSH 参数和运行变量。 |
 | 24. CI 和验收 | 新增 PR 校验，main 发布先校验；lint 默认无修改，另有 lint:fix；添加 7 项内容/RSS/回滚测试与生成 HTML 校验；附本地 HTTP 冒烟脚本。 |
 

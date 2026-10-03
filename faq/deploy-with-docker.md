@@ -1,6 +1,6 @@
 # Docker 发布、验收与回滚
 
-使用 Node 22、Docker Desktop、Docker Buildx 与 Docker Compose v2.24+。本地公开配置从 `.env.example` 复制到 `.env.local`，SSH 参数从 `.env.deploy.example` 复制到 `.env.deploy`。当前生产服务器为 `81.70.213.236`。
+使用 Node 26、Docker Desktop、Docker Buildx 与 Docker Compose v2.24+。本地公开配置从 `.env.example` 复制到 `.env.local`，SSH 参数从 `.env.deploy.example` 复制到 `.env.deploy`。当前生产服务器为 `81.70.213.236`。
 
 `NEXT_PUBLIC_*` 和 `BASE_PATH` 在构建时确定，修改后必须重新构建。`.env.local` 通过 BuildKit secret 在本机挂载；原始环境文件不会复制进镜像或上传到服务器。公开值会进入客户端，不能存放密钥。
 

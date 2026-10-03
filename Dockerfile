@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-bookworm-slim AS dependencies
+FROM node:26-bookworm-slim AS dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
-FROM node:22-bookworm-slim AS builder
+FROM node:26-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -15,7 +15,7 @@ COPY --from=dependencies /app/package.json /app/package-lock.json /app/.npmrc ./
 COPY . .
 RUN --mount=type=secret,id=env_local,target=/app/.env.local,required=false npm run check
 
-FROM node:22-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
