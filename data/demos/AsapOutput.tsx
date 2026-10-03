@@ -69,7 +69,7 @@ const AsapOutputDemo = () => {
       <button
         onClick={startDemo}
         disabled={state.isRunning}
-        className={`mt-1 rounded-lg px-5 py-2 text-lg text-white transition-colors ${state.isRunning ? 'cursor-not-allowed bg-gray-400' : 'cursor-pointer bg-blue-700 hover:bg-blue-800'}`}
+        className={`mt-1 rounded-lg px-5 py-2 text-lg text-white transition-colors ${state.isRunning ? 'cursor-not-allowed bg-gray-400' : 'cursor-pointer bg-primary-500 hover:bg-primary-600'}`}
       >
         {state.isRunning ? '演示中…' : '重新演示'}
       </button>
