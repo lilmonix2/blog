@@ -17,7 +17,7 @@ export default function Home({ posts }: { posts: PostSummary[] }) {
             别松懈，不然会从轮子上掉下来。
           </p>
         </div>
-        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+        <ul className="space-y-2">
           {!posts.length && '暂无文章。'}
           {posts.slice(0, MAX_DISPLAY).map((post) => (
             <li key={post.slug} className="py-3">

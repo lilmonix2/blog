@@ -9,7 +9,8 @@ import SearchButton from './SearchButton'
 const Header = () => {
   let headerClass = 'flex items-center w-full justify-between py-6 transition-colors duration-200'
   if (siteMetadata.stickyNav) {
-    headerClass += ' sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md'
+    headerClass +=
+      ' sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50'
   } else {
     headerClass += ' bg-white dark:bg-gray-950'
   }

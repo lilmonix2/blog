@@ -13,7 +13,7 @@ export default function PostCard({
   showReadMore?: boolean
 }) {
   return (
-    <article className="group relative -mx-4 space-y-3 rounded-2xl p-4 transition-colors focus-within:bg-gray-50 hover:bg-gray-50 dark:focus-within:bg-gray-900/60 dark:hover:bg-gray-900/60">
+    <article className="group relative -mx-4 space-y-3 rounded-2xl p-4 transition-all focus-within:bg-gray-50 hover:bg-gray-50 active:scale-[0.98] dark:focus-within:bg-gray-900/60 dark:hover:bg-gray-900/60">
       <h2 className="text-2xl leading-8 font-bold tracking-tight text-gray-900 dark:text-gray-100">
         <Link
           href={`/${post.path}`}

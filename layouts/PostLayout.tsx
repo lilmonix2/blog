@@ -41,7 +41,7 @@ export default function PostLayout({
       <ScrollTopAndComment />
       <article>
         <div className="xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
-          <header className="pt-6 pb-4 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:pb-8">
+          <header className="pt-6 pb-4 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:pb-4">
             <div className="mx-auto w-full max-w-[46rem] xl:col-span-3 xl:col-start-2">
               <PageTitle>{title}</PageTitle>
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
@@ -56,7 +56,7 @@ export default function PostLayout({
             </div>
           </header>
           <div className="grid-rows-[auto_1fr] divide-y divide-gray-200 pb-8 xl:grid xl:grid-cols-4 xl:gap-x-6 xl:divide-y-0 dark:divide-gray-700">
-            <dl className="pt-2 pb-4 xl:border-b xl:border-gray-200 xl:pt-8 xl:pb-8 xl:dark:border-gray-700">
+            <dl className="pt-2 pb-4 xl:border-b xl:border-gray-200 xl:pt-4 xl:pb-4 xl:dark:border-gray-700">
               <dt className="sr-only">作者</dt>
               <dd>
                 <ul className="flex flex-wrap gap-4 xl:block xl:space-y-8">
@@ -97,7 +97,7 @@ export default function PostLayout({
               {toc && <TableOfContents key={`${slug}-mobile`} toc={toc} mobile />}
               <div
                 id="article-content"
-                className="prose reading-prose dark:prose-invert pt-4 pb-8 sm:pt-8"
+                className="prose reading-prose dark:prose-invert pt-4 pb-4 sm:pt-4"
               >
                 {children}
               </div>
@@ -114,12 +114,12 @@ export default function PostLayout({
             <footer className="xl:sticky xl:top-6 xl:col-start-1 xl:row-start-2 xl:self-start">
               <div className="divide-y divide-gray-200 text-sm leading-5 font-medium dark:divide-gray-700">
                 {toc && (
-                  <div className="py-4 xl:py-8">
+                  <div className="py-4 xl:py-4">
                     <TableOfContents key={slug} toc={toc} />
                   </div>
                 )}
                 {tags && (
-                  <div className="py-4 xl:py-8">
+                  <div className="py-4 xl:py-4">
                     <h2 className="text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
                       标签
                     </h2>

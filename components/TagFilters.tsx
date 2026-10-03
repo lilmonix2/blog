@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useState } from 'react'
-import { Check, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import Link from './Link'
 
 type Topic = { slug: string; name: string; count: number }
@@ -21,13 +21,12 @@ export default function TagFilters({ tags, activeTag }: { tags: Topic[]; activeT
         href={tag ? `/tags/${tag.slug}` : '/blog'}
         aria-current={selected ? 'page' : undefined}
         onClick={() => setExpanded(false)}
-        className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-3 text-sm transition-colors ${
+        className={`flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-2 text-sm transition-colors ${
           selected
             ? 'bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-200 font-semibold'
             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
         }`}
       >
-        {selected && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
         <span className="break-words">{tag?.name || '全部文章'}</span>
         {tag && (
           <span className="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">

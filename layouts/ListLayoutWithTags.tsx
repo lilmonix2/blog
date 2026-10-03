@@ -22,7 +22,7 @@ export default function ListLayout({ posts, title, tags, activeTag, basePath, pa
       <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
         <TagFilters key={activeTag || 'all'} tags={tags} activeTag={activeTag} />
         <div className="min-w-0">
-          <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+          <ul className="space-y-2">
             {posts.map((post) => (
               <li key={post.path} className="py-3">
                 <PostCard post={post} />
