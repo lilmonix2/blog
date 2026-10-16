@@ -19,6 +19,8 @@ Docker 使用 standalone server，主机只暴露 `127.0.0.1:3000`。`npm run de
 npm run deploy
 ```
 
+部署前会检查 Docker 引擎是否可用；未就绪时自动执行 `docker desktop start --timeout 120`，无需手动打开 Docker Desktop。启动失败、超时或启动后当前引擎仍不可用时，会停止部署并提示原因。此功能需要支持 `docker desktop start` 的 Docker Desktop 版本；引擎已运行时直接继续构建。
+
 部署命令在本机使用 Docker Buildx 构建 `linux/amd64` 镜像，然后通过 SSH 上传镜像归档、Compose 文件和重启脚本。`.env.local` 只作为 BuildKit secret 在本机挂载，不上传。默认镜像标签为提交 SHA + 时间戳。服务器在发布前标记现有镜像为 `ixjs-blog:rollback`，等待容器健康检查通过，再验收页面、搜索、RSS、sitemap、原图及非法路由；验收失败会尝试恢复前一镜像。单实例重建会有短暂中断。
 
 仅在需要通过公开域名验收时，才在 `.env.deploy` 设置 `PUBLIC_SMOKE_URL=https://ixjs.com`。首次发布尚无前一镜像时，失败需要人工处理；Compose 与运行时配置的变更需要单独恢复。

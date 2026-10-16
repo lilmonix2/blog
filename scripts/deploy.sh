@@ -18,6 +18,17 @@ fi
 : "${IMAGE_NAME:=$IMAGE_REPOSITORY:$(git rev-parse --short=12 HEAD)-$(date -u +%Y%m%d%H%M%S)}"
 [[ "$IMAGE_NAME" =~ ^[a-zA-Z0-9._/:-]+$ ]] || { echo '无效镜像名' >&2; exit 1; }
 command -v docker >/dev/null || { echo '错误: 本机未安装 Docker' >&2; exit 1; }
+if ! docker info >/dev/null 2>&1; then
+  echo 'Docker 引擎尚未就绪，正在启动 Docker Desktop（最多等待 120 秒）...'
+  if ! docker desktop start --timeout 120; then
+    echo '错误: Docker Desktop 启动失败或超时，请检查安装和启动状态后重试。' >&2
+    exit 1
+  fi
+  if ! docker info >/dev/null 2>&1; then
+    echo '错误: Docker Desktop 已启动，但当前 Docker 引擎仍不可用，请检查 docker context ls 和 DOCKER_HOST 配置。' >&2
+    exit 1
+  fi
+fi
 archive="$(mktemp -t ixjs-blog-image.XXXXXX)"
 trap 'rm -f "$archive"' EXIT
 build_args=(--platform linux/amd64 --tag "$IMAGE_NAME" --load)
