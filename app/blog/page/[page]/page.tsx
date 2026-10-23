@@ -1,5 +1,5 @@
 import ListLayout from '@/layouts/ListLayoutWithTags'
-import { getPostSummaries, getTags, paginatePosts, parsePage } from '@/lib/content'
+import { getPostSummaries, paginatePosts, parsePage } from '@/lib/content'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { genPageMetadata } from 'app/seo'
 
@@ -28,13 +28,5 @@ export function generateStaticParams() {
 export default async function Page({ params }: Props) {
   const page = resolvePage((await params).page)
   if (page.currentPage === 1) permanentRedirect('/blog')
-  return (
-    <ListLayout
-      posts={page.posts}
-      tags={getTags()}
-      pagination={page}
-      basePath="/blog"
-      title="全部文章"
-    />
-  )
+  return <ListLayout posts={page.posts} pagination={page} basePath="/blog" />
 }

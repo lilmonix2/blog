@@ -8,6 +8,14 @@ export interface TocItem {
   depth: number
 }
 
+const headingIndent: Record<number, string> = {
+  2: 'pl-0',
+  3: 'pl-3',
+  4: 'pl-6',
+  5: 'pl-9',
+  6: 'pl-12',
+}
+
 export default function TableOfContents({
   toc,
   mobile = false,
@@ -26,8 +34,15 @@ export default function TableOfContents({
       if (frame) return
       frame = requestAnimationFrame(() => {
         frame = 0
+        const scrollMargin = headings[0]
+          ? Number.parseFloat(getComputedStyle(headings[0]).scrollMarginTop) || 0
+          : 0
         const current =
-          headings.filter((node) => node.getBoundingClientRect().top <= 130).at(-1) || headings[0]
+          headings
+            .filter(
+              (node) => Math.round(node.getBoundingClientRect().top) <= Math.round(scrollMargin)
+            )
+            .at(-1) || headings[0]
         setActive(current?.id || '')
       })
     }
@@ -42,7 +57,7 @@ export default function TableOfContents({
   }, [toc])
   if (!toc.length) return null
   const links = (
-    <nav aria-label="文章目录" className="space-y-2">
+    <nav aria-label="文章目录" className="space-y-0.5">
       {toc.map((item) => {
         const isActive = active === decodeURIComponent(item.url.slice(1))
         return (
@@ -53,14 +68,13 @@ export default function TableOfContents({
             onClick={() => {
               if (details.current) details.current.open = false
             }}
-            className={`flex min-h-11 items-center rounded-lg py-2 pr-2.5 text-sm transition-colors ${
+            className={`flex min-h-11 items-center rounded-xl py-2 pr-2.5 text-sm leading-6 transition-colors ${headingIndent[item.depth] || 'pl-0'} ${
               isActive
-                ? 'bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300 font-medium'
-                : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200'
+                ? 'text-primary-700 dark:text-primary-300 font-medium'
+                : 'text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-gray-100'
             }`}
-            style={{ paddingLeft: `${Math.max(0, item.depth - 2) * 12 + 10}px` }}
           >
-            {item.value.replace(/[`*_~]/g, '')}
+            <span>{item.value.replace(/[`*_~]/g, '')}</span>
           </a>
         )
       })}
@@ -70,17 +84,17 @@ export default function TableOfContents({
     return (
       <details
         ref={details}
-        className="my-4 rounded-xl border border-gray-200/80 px-4 py-1 xl:hidden dark:border-gray-800"
+        className="my-5 rounded-2xl border border-gray-200/70 bg-gray-50/80 px-4 py-1 xl:hidden dark:border-gray-800 dark:bg-gray-900/60"
       >
         <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-gray-900 dark:text-gray-100">
           文章目录
         </summary>
-        <div className="pt-4">{links}</div>
+        <div className="pt-2 pb-3">{links}</div>
       </details>
     )
   return (
-    <div className="hidden max-h-[60dvh] overflow-y-auto xl:block">
-      <h2 className="mb-3 text-base font-bold text-gray-900 dark:text-gray-100">文章目录</h2>
+    <div className="hidden xl:block">
+      <h2 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">文章目录</h2>
       {links}
     </div>
   )

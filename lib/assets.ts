@@ -17,3 +17,8 @@ export function imageUrl(src: ImageProps['src']): string {
       ? resolved.src
       : resolved.default.src
 }
+
+export function isGifImage(src: ImageProps['src']): boolean {
+  const url = imageUrl(src)
+  return /^data:image\/gif[;,]/i.test(url) || /\.gif(?:[?#]|$)/i.test(url)
+}

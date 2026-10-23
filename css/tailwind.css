@@ -184,7 +184,7 @@ input:-webkit-autofill:focus {
     outline-color: #93c5fd;
   }
   #article-content :where(h2, h3, h4, h5, h6) {
-    scroll-margin-top: 2rem;
+    @apply scroll-mt-8;
   }
 }
 @layer utilities {
@@ -219,6 +219,14 @@ input:-webkit-autofill:focus {
 }
 
 @layer components {
+  .pill-link {
+    @apply hover:border-primary-300 hover:text-primary-600 dark:hover:border-primary-700 dark:hover:text-primary-300 inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium whitespace-nowrap text-gray-700 transition-colors hover:bg-gray-50 aria-disabled:pointer-events-none aria-disabled:opacity-40 sm:px-5 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800;
+  }
+
+  .article-card {
+    @apply focus-within:border-primary-200 hover:border-primary-200 rounded-3xl border border-gray-200/70 bg-gray-50/70 transition duration-200 focus-within:bg-white focus-within:shadow-sm hover:bg-white hover:shadow-sm dark:border-gray-800/80 dark:bg-gray-900/50 dark:focus-within:border-gray-700 dark:focus-within:bg-gray-900 dark:hover:border-gray-700 dark:hover:bg-gray-900;
+  }
+
   .page-heading {
     @apply text-3xl leading-tight font-bold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl dark:text-gray-100;
   }
@@ -231,5 +239,34 @@ input:-webkit-autofill:focus {
     font-size: 1.0625rem;
     line-height: 1.85;
     overflow-wrap: anywhere;
+  }
+}
+
+/* The menu grows from the existing h-13 / w-13 trigger into its content. */
+@layer components {
+  .morph-menu-panel {
+    --menu-trigger-size: calc(var(--spacing) * 13);
+    clip-path: inset(0 0 0 0 round var(--radius-3xl));
+    transition-property: clip-path, opacity, background-color, border-color, color;
+    @apply duration-300 ease-out;
+  }
+  .morph-menu-panel[data-closed] {
+    clip-path: inset(
+      0 0 calc(100% - var(--menu-trigger-size)) calc(100% - var(--menu-trigger-size)) round
+        var(--radius-3xl)
+    );
+    @apply opacity-0;
+  }
+  .morph-menu-content {
+    @apply translate-y-0 opacity-100 transition duration-200 ease-out;
+  }
+  .morph-menu-panel[data-closed] .morph-menu-content {
+    @apply -translate-y-2 opacity-0;
+  }
+  .morph-menu-panel[data-enter] .morph-menu-content {
+    @apply delay-100 motion-reduce:delay-0;
+  }
+  .morph-menu-item {
+    @apply flex min-h-11 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm font-medium transition-colors duration-150 hover:bg-gray-100 data-focus:bg-gray-100 dark:hover:bg-gray-800 dark:data-focus:bg-gray-800;
   }
 }

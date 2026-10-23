@@ -25,14 +25,5 @@ export default async function TagPage({ params }: Props) {
   const entry = getTags().find((item) => item.slug === tag)
   if (!entry) notFound()
   const page = paginatePosts(getPostSummaries(tag))
-  return (
-    <ListLayout
-      posts={page.posts}
-      tags={getTags()}
-      activeTag={tag}
-      pagination={page}
-      basePath={`/tags/${tag}`}
-      title={entry.name}
-    />
-  )
+  return <ListLayout posts={page.posts} pagination={page} basePath={`/tags/${tag}`} />
 }

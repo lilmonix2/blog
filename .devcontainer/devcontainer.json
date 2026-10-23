@@ -1,5 +1,10 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:26",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "26.12.1"
+    }
+  },
   "hostRequirements": {
     "memory": "8gb"
   },

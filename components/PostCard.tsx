@@ -13,11 +13,11 @@ export default function PostCard({
   showReadMore?: boolean
 }) {
   return (
-    <article className="group relative -mx-4 space-y-3 rounded-2xl p-4 transition-all focus-within:bg-gray-50 hover:bg-gray-50 active:scale-[0.98] dark:focus-within:bg-gray-900/60 dark:hover:bg-gray-900/60">
-      <h2 className="text-2xl leading-8 font-bold tracking-tight text-gray-900 dark:text-gray-100">
+    <article className="article-card group relative space-y-4 p-5 sm:p-7">
+      <h2 className="text-xl leading-snug font-semibold tracking-tight text-gray-900 sm:text-2xl dark:text-gray-100">
         <Link
           href={`/${post.path}`}
-          className="group-hover:text-primary-600 dark:group-hover:text-primary-300 transition-colors after:absolute after:inset-0 after:rounded-2xl"
+          className="group-hover:text-primary-600 dark:group-hover:text-primary-300 transition-colors after:absolute after:inset-0 after:rounded-3xl"
         >
           {post.title}
         </Link>
@@ -32,7 +32,7 @@ export default function PostCard({
           ))}
         </div>
       </div>
-      <p className="line-clamp-2 text-base leading-7 text-gray-600 dark:text-gray-300">
+      <p className="line-clamp-3 max-w-5xl text-sm leading-7 text-gray-600 sm:line-clamp-2 sm:text-base dark:text-gray-300">
         {post.summary}
       </p>
       {showReadMore && (

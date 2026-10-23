@@ -37,14 +37,5 @@ export default async function TagPage({ params }: Props) {
   const { tag: rawTag, page } = await params
   const result = resolvePage(rawTag, page)
   if (result.currentPage === 1) permanentRedirect(`/tags/${result.tag}`)
-  return (
-    <ListLayout
-      posts={result.posts}
-      tags={getTags()}
-      activeTag={result.tag}
-      pagination={result}
-      basePath={`/tags/${result.tag}`}
-      title={result.entry.name}
-    />
-  )
+  return <ListLayout posts={result.posts} pagination={result} basePath={`/tags/${result.tag}`} />
 }

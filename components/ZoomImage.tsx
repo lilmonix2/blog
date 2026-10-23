@@ -2,16 +2,18 @@
 
 import NextImage, { getImageProps, type ImageProps } from 'next/image'
 import { PhotoView } from 'react-photo-view'
-import { assetPath, imageUrl } from '@/lib/assets'
+import { assetPath, imageUrl, isGifImage } from '@/lib/assets'
 
-export default function ZoomImage({ src, alt, ...rest }: ImageProps) {
+export default function ZoomImage({ src, alt, unoptimized, ...rest }: ImageProps) {
   const original = imageUrl(src)
+  const skipOptimization = isGifImage(src) || unoptimized
   const fullSize = getImageProps({
     src: original,
     alt,
     width: Number(rest.width) || 1920,
     height: Number(rest.height) || 1080,
     quality: 100,
+    unoptimized: skipOptimization,
   }).props.src
   return (
     <PhotoView
@@ -32,6 +34,7 @@ export default function ZoomImage({ src, alt, ...rest }: ImageProps) {
           alt={alt}
           sizes="(max-width: 640px) calc(100vw - 48px), (max-width: 1280px) calc(100vw - 96px), 768px"
           {...rest}
+          unoptimized={skipOptimization}
         />
       </button>
     </PhotoView>

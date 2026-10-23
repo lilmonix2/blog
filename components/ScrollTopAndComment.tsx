@@ -18,17 +18,22 @@ const ScrollTopAndComment = () => {
     return () => window.removeEventListener('scroll', handleWindowScroll)
   }, [])
 
+  const scrollBehavior = (): ScrollBehavior =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+
   const handleScrollTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: scrollBehavior() })
   }
   const handleScrollToComment = () => {
-    document.getElementById('comment')?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById('comment')?.scrollIntoView({ behavior: scrollBehavior() })
   }
 
   return (
     <div
-      className={`fixed right-5 bottom-6 z-40 flex-col gap-3 transition-opacity duration-200 ${
-        show ? 'flex' : 'pointer-events-none hidden'
+      inert={!show}
+      aria-hidden={!show}
+      className={`fixed right-5 bottom-6 z-40 flex flex-col gap-3 transition duration-200 ease-out ${
+        show ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'
       }`}
     >
       {siteMetadata.comments?.provider && (

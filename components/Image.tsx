@@ -1,6 +1,8 @@
 import NextImage, { ImageProps } from 'next/image'
-import { assetPath } from '@/lib/assets'
+import { assetPath, isGifImage } from '@/lib/assets'
 
-const Image = ({ src, ...rest }: ImageProps) => <NextImage src={assetPath(src)} {...rest} />
+const Image = ({ src, unoptimized, ...rest }: ImageProps) => (
+  <NextImage src={assetPath(src)} {...rest} unoptimized={isGifImage(src) || unoptimized} />
+)
 
 export default Image

@@ -9,6 +9,7 @@ import Tag from '@/components/Tag'
 import siteMetadata from '@/data/siteMetadata'
 import ScrollTopAndComment from '@/components/ScrollTopAndComment'
 import TableOfContents, { TocItem } from '@/components/TableOfContents'
+import ArticleSidebar from '@/components/ArticleSidebar'
 
 const postDateTemplate: Intl.DateTimeFormatOptions = {
   year: 'numeric',
@@ -111,7 +112,7 @@ export default function PostLayout({
                 </div>
               )}
             </div>
-            <footer className="xl:sticky xl:top-6 xl:col-start-1 xl:row-start-2 xl:self-start">
+            <ArticleSidebar>
               <div className="divide-y divide-gray-200 text-sm leading-5 font-medium dark:divide-gray-700">
                 {toc && (
                   <div className="py-4 xl:py-4">
@@ -131,31 +132,42 @@ export default function PostLayout({
                   </div>
                 )}
                 {(next || prev) && (
-                  <div className="flex flex-col gap-4 py-4 sm:flex-row sm:justify-between xl:block xl:space-y-8 xl:py-8">
+                  <nav
+                    aria-label="文章翻页"
+                    className="grid gap-4 py-4 sm:grid-cols-2 xl:grid-cols-1"
+                  >
                     {prev && prev.path && (
-                      <div>
-                        <h2 className="text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                      <Link
+                        href={`/${prev.path}`}
+                        rel="prev"
+                        className="article-card group block min-w-0 rounded-2xl p-4"
+                      >
+                        <span className="mb-2 block text-xs font-medium text-gray-500 dark:text-gray-400">
                           上一篇
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/${prev.path}`}>{prev.title}</Link>
-                        </div>
-                      </div>
+                        </span>
+                        <span className="group-hover:text-primary-600 dark:group-hover:text-primary-300 block text-sm leading-6 font-semibold text-gray-900 transition-colors dark:text-gray-100">
+                          {prev.title}
+                        </span>
+                      </Link>
                     )}
                     {next && next.path && (
-                      <div>
-                        <h2 className="text-xs font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                      <Link
+                        href={`/${next.path}`}
+                        rel="next"
+                        className="article-card group block min-w-0 rounded-2xl p-4"
+                      >
+                        <span className="mb-2 block text-xs font-medium text-gray-500 dark:text-gray-400">
                           下一篇
-                        </h2>
-                        <div className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400">
-                          <Link href={`/${next.path}`}>{next.title}</Link>
-                        </div>
-                      </div>
+                        </span>
+                        <span className="group-hover:text-primary-600 dark:group-hover:text-primary-300 block text-sm leading-6 font-semibold text-gray-900 transition-colors dark:text-gray-100">
+                          {next.title}
+                        </span>
+                      </Link>
                     )}
-                  </div>
+                  </nav>
                 )}
               </div>
-              <div className="pt-4 xl:pt-8">
+              <div className="pt-4">
                 <Link
                   href={`/${basePath}`}
                   className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
@@ -164,7 +176,7 @@ export default function PostLayout({
                   &larr; 返回文章列表
                 </Link>
               </div>
-            </footer>
+            </ArticleSidebar>
           </div>
         </div>
       </article>

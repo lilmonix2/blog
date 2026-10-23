@@ -5,6 +5,8 @@ import { Analytics } from 'pliny/analytics'
 import Header from '@/components/Header'
 import SectionContainer from '@/components/SectionContainer'
 import Footer from '@/components/Footer'
+import ArticleListShell from '@/components/ArticleListShell'
+import { getTags, getPublishedPosts } from '@/lib/content'
 import siteMetadata from '@/data/siteMetadata'
 import { ThemeProviders } from './theme-providers'
 import { Metadata, Viewport } from 'next'
@@ -94,7 +96,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SectionContainer>
             <Header />
             <main id="main-content" tabIndex={-1} className="mb-auto">
-              {children}
+              <ArticleListShell tags={getTags()} totalPosts={getPublishedPosts().length}>
+                {children}
+              </ArticleListShell>
             </main>
             <Footer />
           </SectionContainer>
